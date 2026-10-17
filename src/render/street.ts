@@ -54,14 +54,16 @@ let smoke: { x: number; y: number; vx: number; vy: number; a: number }[] = [];
 export function initRenderer(canvas: HTMLCanvasElement): void {
   cv = canvas; ctx = canvas.getContext('2d')!;
   window.addEventListener('resize', resize);
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(resize).observe(canvas);
   resize();
   requestAnimationFrame(render);
 }
 
 export function resize(): void {
   if (!cv) return;
-  const r = cv.getBoundingClientRect(), d = Math.min(window.devicePixelRatio || 1, 2);
-  cv.width = r.width * d; cv.height = r.height * d; ctx.setTransform(cv.width / LW, 0, 0, cv.height / LH, 0, 0);
+  // clientWidth ignores CSS transforms, so a screen's slide-in animation can't skew the canvas size
+  const d = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = cv.clientWidth * d; cv.height = cv.clientHeight * d; ctx.setTransform(cv.width / LW, 0, 0, cv.height / LH, 0, 0);
 }
 
 /** Convert a mouse event to logical street coordinates. */

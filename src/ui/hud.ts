@@ -1,34 +1,74 @@
 import { G, SET, hasGame } from '../core/state';
-import { $, fmt } from '../core/util';
+import { $, esc, fmt } from '../core/util';
+import { NEWS } from '../data/content';
 import { hourNow } from '../game/helpers';
 import { jobProgress, jobStalled } from '../game/jobs';
-import { isHeadless } from './toast';
+import { icon } from './icons';
+import { feed, isHeadless } from './toast';
 
 const WEATHER_ICON = { sunny: '☀️', hot: '🔥', rain: '🌧️', storm: '⛈️' } as const;
+const METER_FULL = 40; // units that read as a full bar
 
+function tile(id: string, ico: string, label: string, value: string, pct: number | null, cls: string): void {
+  const el = $('#' + id);
+  el.className = 'tile ' + cls;
+  const bar = pct == null ? '' : `<div class="tb"><i style="width:${Math.max(3, Math.min(100, pct))}%"></i></div>`;
+  el.innerHTML = `<span class="th">${icon(ico, 12)}${label}</span><b class="tv">${value}</b>${bar}`;
+}
+
+function setLabel(sel: string, txt: string): void {
+  const l = $(sel).querySelector('.al'); if (l && l.textContent !== txt) l.textContent = txt;
+}
+
+let lastCash = NaN;
 export function updHUD(): void {
   if (!hasGame() || isHeadless() || !$('#pillTime')) return;
   const h = Math.floor(hourNow()), m = G.minute % 60;
-  const ic = h < 6 ? '🌙' : h < 8 ? '🌅' : h < 17 ? '☀️' : h < 19 ? '🌇' : '🌙';
-  $('#pillTime').innerHTML = `${ic} Day ${G.day} • ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  $('#pillTime').textContent = `Day ${G.day} • ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   $('#pillWeather').textContent = `${WEATHER_ICON[G.weather]} ${G.temp}°C`;
-  const pg = $('#pillGrid');
-  pg.className = 'pill ' + (G.gridOn ? 'on' : 'off');
-  pg.innerHTML = G.gridOn ? '⚡ NEPA: ON' : '⚡ NEPA: OFF';
-  const pm = $('#pillMeter');
-  pm.className = 'pill ' + (G.meterUnits < 4 ? 'warn' : '');
-  pm.innerHTML = `🔋 <b>${G.meterUnits.toFixed(1)}</b>u`;
-  $('#pillCash').innerHTML = `💰 ₦<b>${fmt(G.cash)}</b>`;
-  const pp = $('#pillPhone'); pp.className = 'pill ' + (G.phone < 15 ? 'warn' : '');
-  pp.innerHTML = `📱 <b>${Math.round(G.phone)}</b>%`;
+  $('#hudName').textContent = G.name;
+  $('#hudAva').textContent = (G.name.trim()[0] || '?').toUpperCase();
+
+  const cash = $('#pillCash');
+  cash.textContent = '₦' + fmt(G.cash);
+  if (!Number.isNaN(lastCash) && Math.round(lastCash) !== Math.round(G.cash)) {
+    cash.classList.add('bump'); setTimeout(() => cash.classList.remove('bump'), 220);
+  }
+  lastCash = G.cash;
+
+  tile('pillGrid', 'zap', 'NEPA', G.gridOn ? 'ON' : 'OFF', null, G.gridOn ? 'on' : 'off');
+  const mu = G.meterUnits;
+  tile('pillMeter', 'gauge', 'Meter', mu.toFixed(1) + 'u', mu / METER_FULL * 100, mu < 2 ? 'warn crit' : mu < 4 ? 'warn' : '');
+  tile('pillPhone', 'phone', 'Phone', Math.round(G.phone) + '%', G.phone, G.phone < 8 ? 'warn crit' : G.phone < 15 ? 'warn' : '');
   const face = G.happiness >= 65 ? '😊' : G.happiness >= 40 ? '😐' : '😩';
-  $('#pillMood').innerHTML = `${face} <b>${Math.round(G.happiness)}</b>%`;
-  $('#btnGen').textContent = G.genOn ? '⏹ Gen: ON' : '🔌 Gen: OFF';
-  $('#btnHustle').textContent = G.job ? `💼 ${jobStalled() ? 'Waiting…' : Math.round(jobProgress() * 100) + '%'}` : '💼 Hustle';
+  tile('pillMood', 'smile', 'Mood', `${face} ${Math.round(G.happiness)}%`, G.happiness, G.happiness < 25 ? 'warn crit' : G.happiness < 40 ? 'warn' : '');
+
+  setLabel('#btnGen', G.genOn ? 'Gen: ON' : 'Gen: OFF');
+  $('#btnGen').classList.toggle('live', G.genOn);
+  setLabel('#btnHustle', G.job ? (jobStalled() ? 'Waiting…' : Math.round(jobProgress() * 100) + '%') : 'Hustle');
+  $('#btnHustle').classList.toggle('live', !!G.job);
+  updFeed();
   updSoundBtns();
 }
 
+const FEED_FROM = { sys: 'You', npc: 'Neighbour', bad: 'Wahala', '': 'Street' } as const;
+let feedKey = '';
+/** The street feed under the scene: everything the street told you this session, newest first. */
+function updFeed(): void {
+  const list = $('#feedList'); if (!list) return;
+  const key = `${feed[0]?.n ?? 0}|${G.day}`;
+  if (key === feedKey) return;
+  feedKey = key;
+  $('#feedNews').textContent = '📰 ' + NEWS[G.day % NEWS.length].replace(/<[^>]+>/g, '');
+  if (!feed.length) { list.innerHTML = '<div class="fi empty">Quiet… too quiet. NEPA must be planning something.</div>'; return; }
+  list.innerHTML = feed.map((f) => {
+    const lead = f.txt.match(/^\s*(\p{Extended_Pictographic}\uFE0F?)\s*/u);
+    const body = lead ? f.txt.slice(lead[0].length) : f.txt;
+    return `<div class="fi ${f.cls}"><div class="fw">${lead?.[1] ?? '💬'}</div><div class="fc"><div class="fm">${FEED_FROM[f.cls]} · ${esc(f.t)}</div>${body}</div></div>`;
+  }).join('');
+}
+
 export function updSoundBtns(): void {
-  $('#btnSoundW').innerHTML = '🔊 Sound: <span id="soundStateW">' + (SET.sound ? 'On' : 'Off') + '</span>';
-  $('#btnSoundG').textContent = SET.sound ? '🔊' : '🔇';
+  $('#btnSoundW').innerHTML = `${icon(SET.sound ? 'sound' : 'mute', 18)} Sound: <span id="soundStateW">${SET.sound ? 'On' : 'Off'}</span>`;
+  const g = $('#btnSoundG'); if (g) g.innerHTML = icon(SET.sound ? 'sound' : 'mute', 18);
 }

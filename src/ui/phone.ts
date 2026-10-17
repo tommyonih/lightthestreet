@@ -15,10 +15,17 @@ import { checkObj } from '../game/progress';
 import { applianceDrain } from '../game/sim';
 import { isHeadless, toast } from './toast';
 import { updHUD } from './hud';
+import { icon } from './icons';
 
-type Tab = 'meter' | 'power' | 'street' | 'week' | 'wallet' | 'shop' | 'hustle' | 'gist' | 'tasks';
-const TABS: [Tab, string][] = [['meter', '⚡ Meter'], ['power', '🔌 Power'], ['street', '🏘️ Street'], ['week', '🏆 Week'], ['wallet', '💰 Wallet'],
-  ['shop', '🛒 Shop'], ['hustle', '💼 Hustle'], ['gist', '💬 Gist'], ['tasks', '✅ Tasks']];
+export type Tab = 'apps' | 'meter' | 'power' | 'street' | 'week' | 'wallet' | 'shop' | 'hustle' | 'gist' | 'tasks';
+/** The home-screen grid: [tab, label, icon, tile colour]. */
+const APPS: [Exclude<Tab, 'apps'>, string, string, string][] = [
+  ['meter', 'Meter', 'gauge', '#e0892f'], ['power', 'Power', 'plug', '#3f7fd8'], ['street', 'People', 'users', '#8a5cd0'],
+  ['week', 'Week', 'trophy', '#d0a52a'], ['wallet', 'Wallet', 'wallet', '#2f9e5a'], ['shop', 'Shop', 'cart', '#d0503f'],
+  ['hustle', 'Hustle', 'briefcase', '#4a6a8a'], ['gist', 'Gist', 'chat', '#2a9ab0'], ['tasks', 'Tasks', 'check', '#6a8a3a'],
+];
+/** Apps with their own slot on the tab bar; the rest light up "Apps". */
+const ON_TABBAR: Tab[] = ['meter', 'street', 'week', 'apps'];
 
 let curTab: Tab = 'meter';
 
@@ -34,14 +41,36 @@ function policyList(): string[] {
   return out;
 }
 
+export const phoneOpen = (): boolean => !!$('#phone')?.classList.contains('open');
+
 export function openPhone(tab?: Tab): void {
-  $('#phone').classList.add('open'); renderPhone(tab || curTab);
+  $('#phone').classList.add('open'); $('#phoneScrim')?.classList.add('open');
+  renderPhone(tab || curTab);
   if (curTab === 'meter') checkObj('meter');
 }
-export function closePhone(): void { $('#phone').classList.remove('open'); }
-export function togglePhone(): void { if ($('#phone').classList.contains('open')) closePhone(); else openPhone('meter'); }
+export function closePhone(): void {
+  $('#phone').classList.remove('open'); $('#phoneScrim')?.classList.remove('open'); markTabbar();
+}
+export function togglePhone(): void { if (phoneOpen()) closePhone(); else openPhone('meter'); }
+
+/** Light up the tab-bar slot for whatever is on screen. */
+function markTabbar(): void {
+  const open = phoneOpen(), slot = !open ? 'home' : ON_TABBAR.includes(curTab) ? curTab : 'apps';
+  document.querySelectorAll<HTMLElement>('#tabbar .tbi').forEach((b) => b.classList.toggle('sel', b.dataset.nav === slot));
+}
+
+/** Tab-bar tap: "home" closes the sheet, anything else opens (or closes, if already showing) that app. */
+export function navTo(slot: string): void {
+  if (slot === 'home') { closePhone(); return; }
+  if (phoneOpen() && curTab === slot) { closePhone(); return; }
+  openPhone(slot as Tab);
+}
 
 const views: Record<Tab, () => [string, string]> = {
+  apps() {
+    return ['Apps', `<div class="apps">${APPS.map(([id, n, ic, c]) => `<button class="app" data-app="${id}"><span class="ai" style="background:linear-gradient(160deg,${c},${c}bb)">${icon(ic, 26)}</span>${n}</button>`).join('')}</div>
+      <p class="note">Tap houses and neighbours on the street to interact.</p>`];
+  },
   meter() {
     const drain = applianceDrain(); const minsLeft = drain > 0 ? G.meterUnits / drain : Infinity;
     let h = `<div style="text-align:center;padding:6px 0">
@@ -162,15 +191,15 @@ const views: Record<Tab, () => [string, string]> = {
 
 export function renderPhone(tab?: Tab): void {
   if (!hasGame() || isHeadless() || !$('#phoneBody')) return;
-  curTab = tab || curTab;
-  $('#phoneTabs').innerHTML = TABS.map(([id, n]) => `<div class="tab ${curTab === id ? 'sel' : ''}" data-tab="${id}">${n}</div>`).join('');
-  $('#phoneTabs').querySelectorAll<HTMLElement>('.tab').forEach((el) => {
-    el.onclick = () => { const t = el.dataset.tab as Tab; renderPhone(t); if (t === 'meter') checkObj('meter'); };
-  });
+  const prev = curTab; curTab = tab || curTab;
+  markTabbar();
+  $('#phoneBack').classList.toggle('show', curTab !== 'apps' && !ON_TABBAR.includes(curTab));
   const [title, html] = views[curTab]();
-  $('#phoneTitle').textContent = title;
+  $('#phoneTitle').textContent = title.replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, '');
   const b = $('#phoneBody'); b.innerHTML = html;
+  if (prev !== curTab) { b.classList.remove('swap'); void b.offsetWidth; b.classList.add('swap'); b.scrollTop = 0; }
   const on = (sel: string, fn: () => void) => { const e = b.querySelector<HTMLElement>(sel); if (e) e.onclick = fn; };
+  b.querySelectorAll<HTMLElement>('[data-app]').forEach((e) => { e.onclick = () => { const t = e.dataset.app as Tab; renderPhone(t); if (t === 'meter') checkObj('meter'); }; });
   b.querySelectorAll<HTMLElement>('[data-buy]').forEach((e) => { e.onclick = () => buyUnits(Number(e.dataset.buy)); });
   on('#pGen', () => { if (G.genOn) stopGen(); else startGen(); renderPhone(); });
   on('#pBank', () => {

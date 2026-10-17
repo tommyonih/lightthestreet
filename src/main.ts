@@ -13,7 +13,9 @@ import { C, applyCreator, buildCreator, redrawPreview } from './ui/creator';
 import { updHUD, updSoundBtns } from './ui/hud';
 import { genPanel, initStreetClicks } from './ui/interact';
 import { openModal } from './ui/modal';
-import { closePhone, openPhone, renderPhone, togglePhone } from './ui/phone';
+import { closePhone, navTo, openPhone, renderPhone } from './ui/phone';
+import { hydrateIcons } from './ui/icons';
+import { initAppShell } from './ui/shell';
 import { copySummary, endSession } from './ui/results';
 import { show, type ScreenId } from './ui/screens';
 import { toast } from './ui/toast';
@@ -59,7 +61,9 @@ function wire(): void {
   $<HTMLInputElement>('#inpName').addEventListener('input', (e) => { C.name = (e.target as HTMLInputElement).value; redrawPreview(); });
   click('#btnEnter', () => { ac(); startGame(true); });
   click('#btnSoundG', toggleSound);
-  click('#btnPhoneHud', togglePhone);
+  document.querySelectorAll<HTMLElement>('#tabbar .tbi').forEach((b) => { b.onclick = () => navTo(b.dataset.nav!); });
+  click('#phoneBack', () => openPhone('apps'));
+  click('#phoneScrim', closePhone);
   click('#btnPhoneClose', closePhone);
   click('#btnBuy', () => buyUnits(5));
   click('#btnGen', genPanel);
@@ -76,6 +80,7 @@ function wire(): void {
 }
 
 // boot
+hydrateIcons();
 if (loadSave()) $('#btnContinue').style.display = 'block';
 wire();
 const street = $<HTMLCanvasElement>('#street');
@@ -83,6 +88,7 @@ initRenderer(street);
 initStreetClicks(street);
 updSoundBtns();
 initShare();
+initAppShell();
 window.addEventListener('beforeunload', () => { if (hasGame() && G.intro >= INTRO_DONE) save(); });
 setInterval(tick, TICK_MS);
 setInterval(introStep, INTRO_POLL_MS);

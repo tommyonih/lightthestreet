@@ -2,22 +2,47 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Light Up the Street — NEPA fit take light anytime</title>
+<meta name="description" content="A comedy survival sim about NEPA, prepaid meters, generators and neighbours.">
+<meta name="theme-color" content="#141824">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Light Up">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
 </head>
 <body>
 <div id="app">
 
+  <!-- SPLASH -->
+  <div id="splash" aria-hidden="true">
+    <img class="logo" src="./favicon.svg" alt="" width="96" height="96">
+    <div class="splashName">Light Up the Street</div>
+    <div class="splashBar"><i></i></div>
+  </div>
+
   <!-- WELCOME -->
   <div class="screen active" id="scr-welcome">
-    <div class="bulb">💡⚡</div>
-    <h1>LIGHT UP THE STREET</h1>
-    <p class="tagline">“NEPA fit take light anytime. Your street ready?”</p>
+    <div class="hero">
+      <img class="logo" src="./favicon.svg" alt="" width="104" height="104">
+      <h1>Light Up the Street</h1>
+      <p class="tagline">“NEPA fit take light anytime. Your street ready?”</p>
+    </div>
     <div class="card">
-      <button class="btn primary" id="btnPlay">▶ Play Game</button>
-      <button class="btn" id="btnContinue" style="display:none">⏯ Continue Game</button>
-      <button class="btn" id="btnRules">📜 Rules</button>
-      <button class="btn" id="btnSoundW">🔊 Sound: <span id="soundStateW">On</span></button>
+      <button class="btn primary" id="btnPlay">Play Game</button>
+      <button class="btn" id="btnContinue" style="display:none">Continue Game</button>
+      <div class="row">
+        <button class="btn" id="btnRules"><i data-icon="check" data-size="18"></i> Rules</button>
+        <button class="btn" id="btnSoundW">Sound: <span id="soundStateW">On</span></button>
+      </div>
+      <button class="btn ghost" id="btnInstall" style="display:none"><i data-icon="download" data-size="18"></i> Install app</button>
+      <p class="note" id="iosHint" style="display:none">Install: tap <b>Share</b> then <b>Add to Home Screen</b>.</p>
       <p class="note">A comedy survival sim about NEPA, prepaid meters, generators and neighbours.<br>
       All money, units &amp; tokens are <b>100% fictional</b>. Free to play. No real payments.</p>
     </div>
@@ -42,7 +67,7 @@
   <div class="screen" id="scr-rules">
     <div class="card">
       <h2>📜 House Rules</h2>
-      <div style="font-size:13.5px;line-height:1.75;max-height:52vh;overflow-y:auto;padding-right:6px">
+      <div class="rules">
         • The game is <b>free to play</b>.<br>
         • All prices, naira, meter units and tokens are <b>simulated &amp; virtual</b>.<br>
         • No in-game currency can be cashed out — ever.<br>
@@ -58,11 +83,11 @@
 
   <!-- CHARACTER CREATION -->
   <div class="screen" id="scr-create">
-    <div class="card" style="max-width:640px">
+    <div class="card wide">
       <h2>Create Your Resident</h2>
       <div id="createWrap">
         <canvas id="preview" width="140" height="190"></canvas>
-        <div style="flex:1;min-width:240px">
+        <div style="flex:1;min-width:220px">
           <label class="lbl">Nickname</label>
           <input class="txt" id="inpName" maxlength="14" placeholder="e.g. Smallie, Mama Nkechi…">
           <label class="lbl">Presentation</label>
@@ -79,41 +104,66 @@
       <div class="opts" id="optBg"></div>
       <label class="lbl">Pick 1–2 personality traits</label>
       <div class="opts" id="optTraits"></div>
-      <button class="btn primary" id="btnEnter">Enter the Street ➜</button>
+      <button class="btn primary" id="btnEnter">Enter the Street</button>
     </div>
   </div>
 
   <!-- GAME -->
   <div class="screen" id="scr-game">
-    <div id="hud">
-      <span class="pill" id="pillTime">🌅 Day 1 • 7:00 AM</span>
-      <span class="pill" id="pillWeather">☀️ 32°C</span>
-      <span class="pill on" id="pillGrid">⚡ NEPA: ON</span>
-      <span class="pill warn" id="pillMeter">🔋 <b>18</b>u</span>
-      <span class="pill" id="pillCash">💰 ₦<b>5,000</b></span>
-      <span class="pill" id="pillPhone">📱 <b>65</b>%</span>
-      <span class="pill" id="pillMood">😊 <b>70</b>%</span>
-      <div id="hudBtns">
-        <button class="iconbtn" id="btnSoundG" title="Sound">🔊</button>
-        <button class="iconbtn" id="btnPhoneHud" title="Phone">📱</button>
-        <button class="iconbtn" id="btnEnd" title="End session">🏁</button>
+    <header id="hud">
+      <div class="hudTop">
+        <div class="ava" id="hudAva">?</div>
+        <div class="who">
+          <b id="hudName">Resident</b>
+          <span><span id="pillTime">Day 1 • 07:00</span> · <span id="pillWeather">☀️ 32°C</span></span>
+        </div>
+        <div class="cash" id="pillCash">₦5,000</div>
+        <button class="iconbtn" id="btnSoundG" aria-label="Sound"></button>
+        <button class="iconbtn" id="btnEnd" aria-label="End session"><i data-icon="flag" data-size="18"></i></button>
       </div>
-    </div>
+      <div class="tiles">
+        <div class="tile" id="pillGrid"></div>
+        <div class="tile" id="pillMeter"></div>
+        <div class="tile" id="pillPhone"></div>
+        <div class="tile" id="pillMood"></div>
+      </div>
+    </header>
+
     <div id="stage">
       <canvas id="street"></canvas>
-      <div id="phone">
-        <div id="phoneHead"><b id="phoneTitle">📱 Phone</b><button class="iconbtn" id="btnPhoneClose">✕</button></div>
-        <div id="phoneBody"></div>
-        <div class="tabs" id="phoneTabs"></div>
-      </div>
     </div>
+
     <div id="bar">
-      <button class="btn primary" id="btnBuy">⚡ Buy Units</button>
-      <button class="btn" id="btnGen">🔌 Generator</button>
-      <button class="btn" id="btnEat">🍲 Eat (₦300)</button>
-      <button class="btn" id="btnHustle">💼 Hustle</button>
-      <button class="btn" id="btnSleep">😴 Sleep</button>
+      <button class="act primary" id="btnBuy"><span class="ai"><i data-icon="zap"></i></span><span class="al">Buy units</span></button>
+      <button class="act" id="btnGen"><span class="ai"><i data-icon="plug"></i></span><span class="al">Gen: OFF</span></button>
+      <button class="act" id="btnEat"><span class="ai"><i data-icon="food"></i></span><span class="al">Eat ₦300</span></button>
+      <button class="act" id="btnHustle"><span class="ai"><i data-icon="briefcase"></i></span><span class="al">Hustle</span></button>
+      <button class="act" id="btnSleep"><span class="ai"><i data-icon="moon"></i></span><span class="al">Sleep</span></button>
     </div>
+
+    <section id="feed">
+      <div class="feedHead"><b>Street feed</b><span id="feedNews"></span></div>
+      <div id="feedList"></div>
+    </section>
+
+    <div id="phoneScrim"></div>
+    <div id="phone" role="dialog" aria-labelledby="phoneTitle">
+      <div class="grab"></div>
+      <div id="phoneHead">
+        <button class="iconbtn flat" id="phoneBack" aria-label="All apps"><i data-icon="chevron" data-size="20"></i></button>
+        <b id="phoneTitle">Phone</b>
+        <button class="iconbtn flat" id="btnPhoneClose" aria-label="Close"><i data-icon="close" data-size="20"></i></button>
+      </div>
+      <div id="phoneBody"></div>
+    </div>
+
+    <nav id="tabbar">
+      <button class="tbi sel" data-nav="home" id="tabHome"><i data-icon="home"></i><span>Street</span></button>
+      <button class="tbi" data-nav="meter" id="btnPhoneHud"><i data-icon="gauge"></i><span>Meter</span></button>
+      <button class="tbi" data-nav="street"><i data-icon="users"></i><span>People</span></button>
+      <button class="tbi" data-nav="week"><i data-icon="trophy"></i><span>Week</span></button>
+      <button class="tbi" data-nav="apps"><i data-icon="grid"></i><span>Apps</span></button>
+    </nav>
   </div>
 
   <!-- RESULTS -->
@@ -122,24 +172,25 @@
       <h2>📋 Street Report Card</h2>
       <div id="resStats"></div>
       <div class="statusLine" id="resStatus"></div>
-      <button class="btn primary" id="btnShareImg">🖼️ Make my share image</button>
+      <button class="btn primary" id="btnShareImg">Make my share image</button>
       <div class="row">
-        <button class="btn" id="btnCopy">📋 Copy Summary</button>
-        <button class="btn" id="btnResume">↩ Back to Street</button>
+        <button class="btn" id="btnCopy">Copy Summary</button>
+        <button class="btn" id="btnResume">Back to Street</button>
       </div>
-      <button class="btn danger" id="btnNewGame">🔄 Start New Game (erase save)</button>
+      <button class="btn danger" id="btnNewGame">Start New Game (erase save)</button>
       <p class="note">Statistics are from your actual session. All figures virtual &amp; for gist only.</p>
     </div>
   </div>
-</div>
 
-<!-- EVENT MODAL -->
-<div id="modal"><div class="card" id="modalCard">
-  <h3 class="evTitle" id="evTitle"></h3>
-  <p class="evDesc" id="evDesc"></p>
-  <div id="evChoices"></div>
-</div></div>
-<div id="toast"></div>
+  <!-- EVENT MODAL -->
+  <div id="modal"><div class="card" id="modalCard">
+    <div class="grab"></div>
+    <h3 class="evTitle" id="evTitle"></h3>
+    <div class="evDesc" id="evDesc"></div>
+    <div id="evChoices"></div>
+  </div></div>
+  <div id="toast"></div>
+</div>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

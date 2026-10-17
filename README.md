@@ -26,7 +26,10 @@ npm run build      # typecheck + production build into dist/
 | `src/game/meetings.ts` | Street meetings and voting. Add a motion by appending to `MOTIONS` (give each neighbour a stance) |
 | `src/game/` | Economy, generator, street fund, intro, eat/sleep actions |
 | `src/render/` | Canvas street scene and character preview |
-| `src/ui/` | Modal, toast, HUD, phone apps, street clicks, screens, creator, results |
+| `src/ui/` | Modal, toast, HUD + street feed, phone apps (bottom sheet + tab bar), street clicks, screens, creator, results |
+| `src/ui/shell.ts` | App behaviour: splash, service worker, install prompt, haptics, sheet swipe-to-close |
+| `src/ui/icons.ts` | SVG line icons for the app chrome (`<i data-icon="name">` in markup) |
+| `public/` | PWA manifest, offline service worker (`sw.js`), icons. Regenerate icons with `node scripts/make-icons.mjs` |
 | `tests/` | Simulation tests (a scripted player runs a week per background) and a boot smoke test |
 
 ## Balance knobs
