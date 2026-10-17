@@ -1,0 +1,190 @@
+/* The in-game phone: meter, power, street, wallet, shop, hustle, gist and tasks apps. */
+import { G, T, hasGame } from '../core/state';
+import { $, clamp, fmt } from '../core/util';
+import { sfx } from '../core/audio';
+import { ACH, HUSTLES, MEMORY, NEWS, SHOP } from '../data/content';
+import { moodLabel, salient } from '../game/memory';
+import { whereabouts } from '../game/schedule';
+import { ALL_DONE_BONUS, challenge, ensureWeek, progressShare, progressText, weekEndDay } from '../game/challenges';
+import { openShareSheet } from './share';
+import { buyItem, buyUnits, itemPrice, loadToken, UNIT_PRICE } from '../game/economy';
+import { busy, currentHustle, doHustle, jobProgress, jobStalled } from '../game/jobs';
+import { genLabel, repairGen, startGen, stopGen } from '../game/generator';
+import { npcDef, sunUp } from '../game/helpers';
+import { checkObj } from '../game/progress';
+import { applianceDrain } from '../game/sim';
+import { isHeadless, toast } from './toast';
+import { updHUD } from './hud';
+
+type Tab = 'meter' | 'power' | 'street' | 'week' | 'wallet' | 'shop' | 'hustle' | 'gist' | 'tasks';
+const TABS: [Tab, string][] = [['meter', '⚡ Meter'], ['power', '🔌 Power'], ['street', '🏘️ Street'], ['week', '🏆 Week'], ['wallet', '💰 Wallet'],
+  ['shop', '🛒 Shop'], ['hustle', '💼 Hustle'], ['gist', '💬 Gist'], ['tasks', '✅ Tasks']];
+
+let curTab: Tab = 'meter';
+
+function policyList(): string[] {
+  const p = G.policies, out: string[] = [];
+  if (p.genCurfew) out.push('🔇 Gen curfew 10PM–6AM');
+  if (p.maintained) out.push('🔧 Transformer maintenance');
+  if (p.security) out.push('🛡️ Night guard');
+  if (p.solarHub) out.push('🔌 Charging hub');
+  if (p.shameList) out.push('📜 Owing list on gate');
+  if (p.petitionDay) out.push(`✍️ Petition pending (Day ${p.petitionDay})`);
+  if ((p.betterSupplyUntil ?? 0) >= G.day) out.push(`📨 Better supply till Day ${p.betterSupplyUntil}`);
+  return out;
+}
+
+export function openPhone(tab?: Tab): void {
+  $('#phone').classList.add('open'); renderPhone(tab || curTab);
+  if (curTab === 'meter') checkObj('meter');
+}
+export function closePhone(): void { $('#phone').classList.remove('open'); }
+export function togglePhone(): void { if ($('#phone').classList.contains('open')) closePhone(); else openPhone('meter'); }
+
+const views: Record<Tab, () => [string, string]> = {
+  meter() {
+    const drain = applianceDrain(); const minsLeft = drain > 0 ? G.meterUnits / drain : Infinity;
+    let h = `<div style="text-align:center;padding:6px 0">
+      <div style="font-size:34px;font-weight:800;color:${G.meterUnits < 4 ? 'var(--red)' : 'var(--green)'}">${G.meterUnits.toFixed(1)}<span style="font-size:15px"> units</span></div>
+      <div style="font-size:12px;color:var(--dim)">Meter No: ${G.meterNo}</div></div>
+      <div class="stat"><span>Current load</span><b>${drain.toFixed(3)}u/min</b></div>
+      <div class="stat"><span>Estimated time left</span><b>${minsLeft === Infinity ? '—' : Math.floor(minsLeft / 60) + 'h ' + Math.round(minsLeft % 60) + 'm'}</b></div>
+      <div class="stat"><span>Token credit status</span><b>${G.pendingCredit ? '⏳ Pending…' : '✅ Active'}</b></div>`;
+    if (G.meterUnits < 4) h += `<div class="warnbox">⚠️ Low credit! Light fit cut anytime you still dey use am. Buy units before wahala start.</div>`;
+    if (!G.gridOn) h += `<div class="warnbox">Street light no dey — even if you buy 100 units now, dem no go work until NEPA return.</div>`;
+    h += [5, 10, 20].map((n, i) => `<button class="btn ${i === 0 ? 'primary ' : ''}small" data-buy="${n}">Buy ${n} units — ₦${fmt(n * UNIT_PRICE)}</button>`).join('');
+    h += `<label class="lbl">Load promo token (once/day)</label>
+        <input class="txt" id="tokIn" maxlength="14" placeholder="e.g. 5812-4470-9921">
+        <button class="btn small" id="tokGo">Load token</button>
+        <p class="note">All prices fictional. Not connected to any real electricity payment.</p>`;
+    return ['⚡ Meter App', h];
+  },
+  power() {
+    let h = `<div class="stat"><span>Grid (NEPA)</span><b style="color:${G.gridOn ? 'var(--green)' : 'var(--red)'}">${G.gridOn ? 'ON' : 'OFF'}</b></div>
+      <div class="stat"><span>Generator</span><b>${G.gen === 0 ? 'None' : genLabel() + ' • ' + Math.round(G.genCond) + '%'}</b></div>
+      <div class="stat"><span>Fuel ⛽</span><b>${G.fuel.toFixed(1)}L</b></div>
+      <div class="stat"><span>Status</span><b>${G.genOn ? '🔊 RUNNING' : 'Off'}</b></div>`;
+    if (G.inverter > 0) h += `<div class="stat"><span>Inverter charge 🔋</span><b>${Math.round(G.invCharge)}%</b></div>`;
+    if (G.solar > 0) h += `<div class="stat"><span>Solar ☀️</span><b>${sunUp() ? 'Generating' : 'Idle (no sun)'}</b></div>`;
+    if (G.fanRecharge > 0) h += `<div class="stat"><span>Rechargeable fan 🌀</span><b>${Math.round(G.fanBat)}%</b></div>`;
+    if (G.powerbank > 0) h += `<div class="stat"><span>Power bank</span><b>${G.pbankCharges} charge(s) today</b></div>
+      <button class="btn small" id="pBank" ${G.pbankCharges > 0 && G.phone < 90 ? '' : 'disabled'}>🔋 Charge phone from power bank (+40%)</button>`;
+    if (G.lamp > 0) h += `<div class="stat"><span>Rechargeable lamp 🔦</span><b>Ready</b></div>`;
+    h += `<div class="okbox">💡 Appliances: Fan ${G.fanOn ? '✅' : '❌'} • TV ${G.tvOn ? '✅' : '❌'} • Fridge ${G.fridgeOn ? '✅' : '❌'} — tap your house on the street to toggle.</div>
+      <button class="btn primary small" id="pGen">${G.genOn ? '⏹ Stop generator' : '▶ Start generator'}</button>
+      <button class="btn small" id="pRepair">🔧 Service gen (₦1,500)</button>
+      <p class="note">Safety: generator stays outdoors, away from windows — always. The game no reward unsafe play.</p>`;
+    return ['🔌 Power App', h];
+  },
+  street() {
+    let h = `<div class="stat"><span>Street fund 💰</span><b>₦${fmt(G.fund)} / ₦${fmt(G.fundGoal)}</b></div>
+      <div class="stat"><span>Community trust</span><b>${Math.round(G.trust)}%</b></div>
+      <div class="stat"><span>Streetlight</span><b>${G.streetlightFixed ? '💡 Fixed!' : '🔧 Broken'}</b></div>`;
+    if (G.fund > 0 && G.fund < G.fundGoal) h += `<div class="warnbox">${G.owing.length} house(s) never pay: ${G.owing.map((id) => npcDef(id).name).join(', ') || '—'}</div>`;
+    if (G.streetlightFixed) h += `<div class="okbox">Streetlight dey shine every night. Community goals complete — Chairman Material! 🎖️</div>`;
+    h += `<label class="lbl">Street meetings</label>
+      <div class="stat"><span>Chairman</span><b>${G.policies.youChair ? '🎖️ You' : 'Chairman Dele'}</b></div>
+      <div class="stat"><span>Next meeting</span><b>Day ${G.nextMeetingDay}, 6–9PM</b></div>`;
+    const rules = policyList();
+    h += rules.length ? `<div class="okbox">📜 Street rules: ${rules.join(' • ')}</div>` : `<div class="gistline"><i>No street rules passed yet.</i></div>`;
+    h += G.meetings.slice(0, 5).map((r) => `<div class="gistline"><i>Day ${r.day}</i> — ${r.title}: <b style="color:${r.passed ? 'var(--green)' : 'var(--red)'}">${r.passed ? 'PASSED' : 'FAILED'}</b> ${r.yes}–${r.no} <span style="color:var(--dim)">(you: ${r.you})</span></div>`).join('');
+    h += `<label class="lbl">Neighbours</label>`;
+    G.npcs.forEach((n) => {
+      const d = npcDef(n.id), w = whereabouts(n.id), feel = moodLabel(n.id), m = salient(n.id);
+      h += `<div class="stat"><span>${d.name} <i style="color:var(--dim);font-size:11px">${d.role}</i>${n.owing ? ' <b style="color:var(--red)">OWES</b>' : ''}</span><b>♥${Math.round(n.rel)}</b></div>
+        <div style="font-size:11px;color:var(--dim);margin:-4px 0 6px 4px">${w.at === 'out' ? '🚶' : w.at === 'in' ? '🏠' : '📍'} ${w.act}${feel ? ' • ' + feel : ''}${m ? ` • remembers ${MEMORY[m.kind].note} (Day ${m.day})` : ''}</div>`;
+    });
+    h += `<p class="note">Tap neighbours on the street to gist, help, or collect wahala.</p>`;
+    return ['🏘️ Street Group', h];
+  },
+  week() {
+    ensureWeek();
+    const w = G.week, left = weekEndDay(w.n) - G.day;
+    let h = `<div style="text-align:center;padding:4px 0 8px"><div style="font-size:22px;font-weight:800;color:var(--amber)">Week ${w.n}</div>
+      <div style="font-size:12px;color:var(--dim)">${left > 0 ? left + ' day(s) left' : 'Last day!'} • finish all 3 for +₦${fmt(ALL_DONE_BONUS)} bonus</div></div>`;
+    w.list.forEach((item) => {
+      const c = challenge(item.id), pct = Math.round(progressShare(item.id) * 100);
+      const bar = item.state === 'done' ? 'var(--green)' : item.state === 'failed' ? 'var(--red)' : 'var(--amber)';
+      h += `<div class="stat" style="flex-direction:column;gap:4px"><span><b>${c.title}</b> <span style="color:var(--green);font-size:12px">+₦${fmt(c.reward)}</span></span>
+        <span style="font-size:12px;color:var(--dim)">${c.desc}</span>
+        <div style="height:7px;background:var(--panel2);border-radius:9px;overflow:hidden"><div style="height:100%;width:${item.state === 'failed' ? 100 : pct}%;background:${bar}"></div></div>
+        <span style="font-size:12px">${progressText(item.id, item.state)}</span></div>`;
+    });
+    if (G.weekHistory.length) {
+      h += `<label class="lbl">Past weeks</label>` + G.weekHistory.slice(0, 6).map((r) => `<div class="gistline">Week ${r.n}: ${'★'.repeat(r.done)}${'☆'.repeat(r.total - r.done)} ${r.done}/${r.total}</div>`).join('');
+    }
+    h += `<button class="btn small" id="pShareCard">🖼️ Make my street card</button>`;
+    return ['🏆 Weekly Challenges', h];
+  },
+  wallet() {
+    let h = `<div style="text-align:center;padding:8px 0"><div style="font-size:30px;font-weight:800;color:var(--amber)">₦${fmt(G.cash)}</div>
+      <div style="font-size:11.5px;color:var(--dim)">VIRTUAL money — no be real naira, no cash-out.</div></div>
+      <label class="lbl">Recent transactions</label>`;
+    h += G.log.slice(0, 12).map((l) => `<div class="gistline"><i>${l.t}</i> — ${l.txt}</div>`).join('') || '<div class="gistline">No transactions yet.</div>';
+    return ['💰 Wallet', h];
+  },
+  shop() {
+    let h = `<p class="note" style="margin-top:0">All prices fictional gameplay items. Solar Dreamer trait = 25% off power gear.</p>`;
+    SHOP.forEach((it) => {
+      const p = itemPrice(it.id);
+      h += `<button class="btn small" data-shop="${it.id}">${it.n} — ₦${fmt(p)}<div class="evSub">${it.d}${p !== it.p ? ' (discount!)' : ''}</div></button>`;
+    });
+    return ['🛒 Shop', h];
+  },
+  hustle() {
+    let h = `<p class="note" style="margin-top:0">Make virtual money. Some hustles need light (grid, gen, inverter or solar).${G.bg === 'business' ? ' Business owner: +10% pay, and your shop sells while light dey!' : ''}</p>`;
+    const job = currentHustle();
+    if (job) h += `<div class="okbox"><b>${job.verb}</b> — ${jobStalled() ? '⏳ waiting for light…' : Math.round(jobProgress() * 100) + '% done'}<div style="height:7px;background:var(--panel2);border-radius:9px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${Math.round(jobProgress() * 100)}%;background:var(--green)"></div></div></div>`;
+    HUSTLES.forEach((x) => {
+      const cd = Math.max(0, (G.hustleCd[x.id] || 0) - T());
+      const wait = cd >= 60 ? Math.floor(cd / 60) + 'h ' + Math.round(cd % 60) + 'm' : Math.ceil(cd) + ' min';
+      h += `<button class="btn small" data-hustle="${x.id}" ${cd > 0 || busy() ? 'disabled' : ''}>${x.n} — ₦${x.pay[0]}–${x.pay[1]}${x.need === 'any' ? ' ⚡needs light' : ''}${x.phone ? ' 📱' : ''}<div class="evSub">${cd > 0 ? 'Ready in ' + wait + ' (game time)' : x.d} • takes ~${x.mins / 60}h</div></button>`;
+    });
+    return ['💼 Hustles', h];
+  },
+  gist() {
+    let h = `<div class="warnbox" style="background:#182030;border-color:var(--line);color:var(--ink)">📰 <b>Street News:</b> ${NEWS[G.day % NEWS.length]}</div>
+      <label class="lbl">Compound gist</label>`;
+    h += G.log.slice(0, 15).map((l) => `<div class="gistline"><i>${l.t}</i> — ${l.txt}</div>`).join('') || '<div class="gistline">Quiet… too quiet. NEPA must be planning something.</div>';
+    return ['💬 Gist & News', h];
+  },
+  tasks() {
+    let h = `<label class="lbl">Tutorial objectives (rewards!)</label>`;
+    G.obj.forEach((o) => { h += `<div class="stat"><span>${o.done ? '✅' : '⬜'} ${o.t}</span><b>₦${o.rw}</b></div>`; });
+    h += `<label class="lbl">Achievements (${G.ach.length}/${ACH.length})</label>`;
+    ACH.forEach((a) => {
+      const got = G.ach.includes(a.id);
+      h += `<div class="stat"><span style="${got ? '' : 'color:var(--dim)'}">${got ? a.n : '🔒 ' + a.n}</span></div><div style="font-size:11px;color:var(--dim);margin:-4px 0 6px 4px">${a.d}</div>`;
+    });
+    return ['✅ Tasks', h];
+  },
+};
+
+export function renderPhone(tab?: Tab): void {
+  if (!hasGame() || isHeadless() || !$('#phoneBody')) return;
+  curTab = tab || curTab;
+  $('#phoneTabs').innerHTML = TABS.map(([id, n]) => `<div class="tab ${curTab === id ? 'sel' : ''}" data-tab="${id}">${n}</div>`).join('');
+  $('#phoneTabs').querySelectorAll<HTMLElement>('.tab').forEach((el) => {
+    el.onclick = () => { const t = el.dataset.tab as Tab; renderPhone(t); if (t === 'meter') checkObj('meter'); };
+  });
+  const [title, html] = views[curTab]();
+  $('#phoneTitle').textContent = title;
+  const b = $('#phoneBody'); b.innerHTML = html;
+  const on = (sel: string, fn: () => void) => { const e = b.querySelector<HTMLElement>(sel); if (e) e.onclick = fn; };
+  b.querySelectorAll<HTMLElement>('[data-buy]').forEach((e) => { e.onclick = () => buyUnits(Number(e.dataset.buy)); });
+  on('#pGen', () => { if (G.genOn) stopGen(); else startGen(); renderPhone(); });
+  on('#pBank', () => {
+    if (G.pbankCharges <= 0) return;
+    G.pbankCharges--; G.phone = clamp(G.phone + 40, 0, 100); sfx.on(); toast('🔋 Power bank don push your phone up!', 'sys'); updHUD(); renderPhone();
+  });
+  on('#pRepair', repairGen);
+  on('#pShareCard', () => openShareSheet({ kind: 'session' }));
+  on('#tokGo', () => {
+    const v = (b.querySelector<HTMLInputElement>('#tokIn')?.value || '').replace(/\D/g, '');
+    if (v.length < 10) { toast('❌ Invalid token. Meter no gree read am.', 'bad'); return; }
+    if (G.flags.tokDay === G.day) { toast('⏳ Promo token already used today. Buy units, big man.', 'bad'); return; }
+    G.flags.tokDay = G.day; loadToken(3); toast('🎟️ Promo token accepted: +3 units!', 'sys');
+  });
+  b.querySelectorAll<HTMLElement>('[data-shop]').forEach((e) => { e.onclick = () => buyItem(e.dataset.shop!); });
+  b.querySelectorAll<HTMLElement>('[data-hustle]').forEach((e) => { e.onclick = () => doHustle(HUSTLES.find((x) => x.id === e.dataset.hustle)!); });
+}

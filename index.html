@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Light Up the Street — NEPA fit take light anytime</title>
+</head>
+<body>
+<div id="app">
+
+  <!-- WELCOME -->
+  <div class="screen active" id="scr-welcome">
+    <div class="bulb">💡⚡</div>
+    <h1>LIGHT UP THE STREET</h1>
+    <p class="tagline">“NEPA fit take light anytime. Your street ready?”</p>
+    <div class="card">
+      <button class="btn primary" id="btnPlay">▶ Play Game</button>
+      <button class="btn" id="btnContinue" style="display:none">⏯ Continue Game</button>
+      <button class="btn" id="btnRules">📜 Rules</button>
+      <button class="btn" id="btnSoundW">🔊 Sound: <span id="soundStateW">On</span></button>
+      <p class="note">A comedy survival sim about NEPA, prepaid meters, generators and neighbours.<br>
+      All money, units &amp; tokens are <b>100% fictional</b>. Free to play. No real payments.</p>
+    </div>
+  </div>
+
+  <!-- AGE -->
+  <div class="screen" id="scr-age">
+    <div class="card">
+      <h2>Hold on small 🤚</h2>
+      <p style="line-height:1.6">This game is intended for players aged <b>18 or older</b>.
+      We don't collect personal information — just your nickname and your street wahala.</p>
+      <p><b>Confirm say you don reach 18?</b></p>
+      <div class="row">
+        <button class="btn primary" id="btnAgeYes">Yes, I am 18+</button>
+        <button class="btn" id="btnAgeNo">Not yet</button>
+      </div>
+      <p class="note" id="ageNote"></p>
+    </div>
+  </div>
+
+  <!-- RULES -->
+  <div class="screen" id="scr-rules">
+    <div class="card">
+      <h2>📜 House Rules</h2>
+      <div style="font-size:13.5px;line-height:1.75;max-height:52vh;overflow-y:auto;padding-right:6px">
+        • The game is <b>free to play</b>.<br>
+        • All prices, naira, meter units and tokens are <b>simulated &amp; virtual</b>.<br>
+        • No in-game currency can be cashed out — ever.<br>
+        • The game does <b>not</b> collect or process real electricity payments.<br>
+        • Real-world recharge (e.g. NextPawa) is separate &amp; optional — not needed to win.<br>
+        • Use a nickname anywhere public.<br>
+        • Never do dangerous electrical repairs or run generators indoors/unsafe — in-game or real life.<br>
+        • Generators must stay outdoors, away from windows. The game enforces this.<br>
+      </div>
+      <button class="btn primary" id="btnRulesBack" style="margin-top:12px">I understand</button>
+    </div>
+  </div>
+
+  <!-- CHARACTER CREATION -->
+  <div class="screen" id="scr-create">
+    <div class="card" style="max-width:640px">
+      <h2>Create Your Resident</h2>
+      <div id="createWrap">
+        <canvas id="preview" width="140" height="190"></canvas>
+        <div style="flex:1;min-width:240px">
+          <label class="lbl">Nickname</label>
+          <input class="txt" id="inpName" maxlength="14" placeholder="e.g. Smallie, Mama Nkechi…">
+          <label class="lbl">Presentation</label>
+          <div class="opts" id="optGender"></div>
+          <label class="lbl">Skin Tone</label>
+          <div class="opts" id="optSkin"></div>
+          <label class="lbl">Hair</label>
+          <div class="opts" id="optHair"></div>
+          <label class="lbl">Outfit</label>
+          <div class="opts" id="optOutfit"></div>
+        </div>
+      </div>
+      <label class="lbl">Pick your background (starting situation)</label>
+      <div class="opts" id="optBg"></div>
+      <label class="lbl">Pick 1–2 personality traits</label>
+      <div class="opts" id="optTraits"></div>
+      <button class="btn primary" id="btnEnter">Enter the Street ➜</button>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div class="screen" id="scr-game">
+    <div id="hud">
+      <span class="pill" id="pillTime">🌅 Day 1 • 7:00 AM</span>
+      <span class="pill" id="pillWeather">☀️ 32°C</span>
+      <span class="pill on" id="pillGrid">⚡ NEPA: ON</span>
+      <span class="pill warn" id="pillMeter">🔋 <b>18</b>u</span>
+      <span class="pill" id="pillCash">💰 ₦<b>5,000</b></span>
+      <span class="pill" id="pillPhone">📱 <b>65</b>%</span>
+      <span class="pill" id="pillMood">😊 <b>70</b>%</span>
+      <div id="hudBtns">
+        <button class="iconbtn" id="btnSoundG" title="Sound">🔊</button>
+        <button class="iconbtn" id="btnPhoneHud" title="Phone">📱</button>
+        <button class="iconbtn" id="btnEnd" title="End session">🏁</button>
+      </div>
+    </div>
+    <div id="stage">
+      <canvas id="street"></canvas>
+      <div id="phone">
+        <div id="phoneHead"><b id="phoneTitle">📱 Phone</b><button class="iconbtn" id="btnPhoneClose">✕</button></div>
+        <div id="phoneBody"></div>
+        <div class="tabs" id="phoneTabs"></div>
+      </div>
+    </div>
+    <div id="bar">
+      <button class="btn primary" id="btnBuy">⚡ Buy Units</button>
+      <button class="btn" id="btnGen">🔌 Generator</button>
+      <button class="btn" id="btnEat">🍲 Eat (₦300)</button>
+      <button class="btn" id="btnHustle">💼 Hustle</button>
+      <button class="btn" id="btnSleep">😴 Sleep</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="screen" id="scr-results">
+    <div class="card">
+      <h2>📋 Street Report Card</h2>
+      <div id="resStats"></div>
+      <div class="statusLine" id="resStatus"></div>
+      <button class="btn primary" id="btnShareImg">🖼️ Make my share image</button>
+      <div class="row">
+        <button class="btn" id="btnCopy">📋 Copy Summary</button>
+        <button class="btn" id="btnResume">↩ Back to Street</button>
+      </div>
+      <button class="btn danger" id="btnNewGame">🔄 Start New Game (erase save)</button>
+      <p class="note">Statistics are from your actual session. All figures virtual &amp; for gist only.</p>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT MODAL -->
+<div id="modal"><div class="card" id="modalCard">
+  <h3 class="evTitle" id="evTitle"></h3>
+  <p class="evDesc" id="evDesc"></p>
+  <div id="evChoices"></div>
+</div></div>
+<div id="toast"></div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
