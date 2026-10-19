@@ -9,6 +9,7 @@ import { stopGen } from './generator';
 import { fun, hourNow, mood } from './helpers';
 import { busy, currentHustle } from './jobs';
 import { applianceDrain, newDay } from './sim';
+import { atHome, comeHome, place } from './world';
 
 export function eatAction(): void {
   if (G.cash < 300) { toast('💸 ₦300 no dey your pocket. Hunger go hear word today.', 'bad'); return; }
@@ -23,13 +24,15 @@ export function sleepAction(): void {
   const h = hourNow();
   if (h >= 6.5 && h < 20) { toast('😴 Day never finish! Sleep only dey allowed from 8PM.', 'bad'); return; }
   if (busy()) { toast(`😴 You still dey work — finish ${currentHustle()?.n} first!`, 'bad'); return; }
-  openModal('😴 Sleep till morning?', `You go rest well, save progress — and wake up 6:30AM.${G.genOn ? '<br><b>Your gen go off first</b> — nobody sleep with gen running. Safety!' : ''} <span style="color:var(--dim)">Small gist: if meter low, e fit beep for midnight o…</span>`, [
+  const away = atHome() ? '' : `<br>You dey ${G.trip ? 'road' : place(G.loc).n} — <b>you go trek go house first.</b>`;
+  openModal('😴 Sleep till morning?', `You go rest well, save progress — and wake up 6:30AM.${away}${G.genOn ? '<br><b>Your gen go off first</b> — nobody sleep with gen running. Safety!' : ''} <span style="color:var(--dim)">Small gist: if meter low, e fit beep for midnight o…</span>`, [
     { t: 'Sleep 🌙', fn: sleepThroughNight },
     { t: 'Not yet' },
   ]);
 }
 
 function sleepThroughNight(): void {
+  comeHome();
   if (G.genOn) stopGen(true);
   const before = T();
   if (G.minute >= WAKE) { G.minute = 0; newDay(); }

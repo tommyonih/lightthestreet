@@ -6,6 +6,7 @@ import { toast } from '../ui/toast';
 import { updHUD } from '../ui/hud';
 import { addCash } from './economy';
 import { checkObj } from './progress';
+import { needHome } from './world';
 
 /** Litres per game-minute (small ≈0.75 L/h, big ≈1.5 L/h). */
 export const DRAIN_GEN: Record<number, number> = { 1: 0.75 / 60, 2: 1.5 / 60 };
@@ -19,6 +20,7 @@ export function loadLevel(): number { return (G.fanOn ? 1 : 0) + (G.tvOn ? 1 : 0
 
 export function startGen(force = false): void {
   if (G.gen === 0) { toast('🔌 You never buy generator. Check the Shop!', 'bad'); return; }
+  if (!needHome('Your gen')) return;
   if (G.fuel <= 0) {
     toast('⛽ Fuel tank empty! Gen no dey run on prayers — buy fuel.', 'bad'); sfx.bad();
     if (G.lamp > 0) toast('🔦 You switch on your rechargeable lamp instead.', 'sys'); return;
@@ -55,7 +57,9 @@ export function startGen(force = false): void {
 }
 
 export function stopGen(silent = false): void {
-  if (!G.genOn) return; G.genOn = false; genHum(false);
+  if (!G.genOn) return;
+  if (!silent && !needHome('Your gen')) return; // the sim stops it silently (trips, fuel, sleep) wherever you are
+  G.genOn = false; genHum(false);
   if (!silent) toast('🔌 Gen off. Compound don quiet small.', 'sys');
   updHUD();
 }

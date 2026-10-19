@@ -13,6 +13,7 @@ export function setupObjectives(): void {
     { id: 'greet', t: 'Greet a neighbour (tap them on the street)', done: false, rw: 300 },
     { id: 'fund', t: 'Contribute to a street fund when asked', done: false, rw: 600 },
     { id: 'gen', t: 'Run your generator (if you own one)', done: false, rw: 400 },
+    { id: 'visit', t: 'Visit another place (open the Map)', done: false, rw: 300 },
   ];
 }
 

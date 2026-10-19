@@ -1,9 +1,11 @@
-/* You, on the street: walking to work, doing the job, riding off on deliveries, and the ₦ when you get paid. */
+/* You, on the street: walking to work, doing the job, riding off on deliveries, and the ₦ when you get paid.
+   Jobs at other places (and any trip) walk you off the left edge, towards the junction. */
 import { G } from '../core/state';
 import { fmt } from '../core/util';
-import { OUTFITS } from '../data/content';
 import { currentHustle, jobProgress, jobStalled, payFx } from '../game/jobs';
+import { here } from '../game/world';
 import { LH, LW, PEOPLE_Y, PLAYER_HOUSE, ROAD_Y } from './layout';
+import type { Light } from './lights';
 
 export interface Pose { kind: 'work' | 'up' | 'bars'; phase: number }
 export interface Painter {
@@ -13,24 +15,26 @@ export interface Painter {
   person: (x: number, y: number, s: number, pose: Pose | undefined, label: string) => void;
   /** Draw an extra (customer) with a given look. */
   extra: (x: number, y: number, s: number, skin: number, outfit: string, pose?: Pose) => void;
+  /** Add a light source to this frame (screens, ring lights). */
+  light: (l: Light) => void;
 }
 
 const HOME = { x: PLAYER_HOUSE.x + PLAYER_HOUSE.w / 2, y: PEOPLE_Y - 6 };
 const LANE_Y = LH - 30; // riding lane on the road
-/** Where each job is done: roadside stalls along the open ground in front of the houses, clear of the porches.
-    Delivery leaves the street to the right. */
+/** Where street jobs are done: roadside stalls in front of the houses, clear of the porches.
+    Delivery leaves to the right; everything else away from the street leaves to the left. */
 const STALL_Y = ROAD_Y - 10;
 const SPOT: Record<string, { x: number; y: number }> = {
-  tailor: { x: 120, y: STALL_Y },
-  pos: { x: 255, y: STALL_Y },
   content: { x: 390, y: STALL_Y },
-  remote: { x: 545, y: STALL_Y },
   barb: { x: 650, y: STALL_Y },
   deliver: { x: LW + 70, y: LANE_Y },
 };
+const OFF = { x: -60, y: PEOPLE_Y + 30 };
 const WALK = 70, RIDE = 170; // logical px per second
 
 const me = { x: HOME.x, y: HOME.y, riding: false, placed: false };
+/** Off the street: on a trip, at another place, or working somewhere else. */
+const away = (): boolean => !here('street') && currentHustle()?.id !== 'deliver';
 const pops: { x: number; y: number; text: string; good: boolean; t0: number }[] = [];
 
 function moveToward(tx: number, ty: number, speed: number, dt: number): boolean {
@@ -43,19 +47,20 @@ function moveToward(tx: number, ty: number, speed: number, dt: number): boolean 
 function stepMe(dt: number): boolean {
   const job = currentHustle();
   if (!me.placed) { // first frame (or after loading mid-job): appear in place
-    const s = job ? SPOT[job.id] : HOME; me.x = s.x; me.y = s.y; me.riding = job?.id === 'deliver'; me.placed = true;
+    const s = job?.id === 'deliver' ? SPOT.deliver : away() ? OFF : job ? SPOT[job.id] : HOME;
+    me.x = s.x; me.y = s.y; me.riding = job?.id === 'deliver'; me.placed = true;
   }
   if (job?.id === 'deliver') { // ride: down to the road, then off to the right
     me.riding = true;
     if (Math.abs(me.y - LANE_Y) > 1 && me.x < LW) { moveToward(me.x, LANE_Y, RIDE, dt); return false; }
     return moveToward(SPOT.deliver.x, LANE_Y, RIDE, dt);
   }
-  if (me.riding) { // coming back from a delivery: re-enter from the left, ride home, hop off
-    if (me.x > LW) { me.x = -70; me.y = LANE_Y; }
-    if (Math.abs(me.x - HOME.x) > 1) { moveToward(HOME.x, LANE_Y, RIDE, dt); return false; }
-    if (moveToward(HOME.x, HOME.y, RIDE * .5, dt)) me.riding = false;
-    return false;
+  if (me.riding) me.riding = false; // after a delivery you're at the junction; you walk home from there
+  if (away()) {
+    if (me.x > LW) { me.x = OFF.x; me.y = OFF.y; } // rode off right on a delivery: stay out of sight
+    moveToward(OFF.x, OFF.y, WALK, dt); return false;
   }
+  if (me.x < 0 || me.x > LW) { me.x = OFF.x; me.y = OFF.y; } // coming home: walk in from the junction side
   const s = job ? SPOT[job.id] : HOME;
   return moveToward(s.x, s.y, WALK, dt) && !!job;
 }
@@ -68,7 +73,6 @@ export function drawJobScene(p: Painter, t: number, dt: number): void {
 
   // props behind you
   if (job && atWork) {
-    if (job.id === 'pos') posStand(p, t, working, 'back');
     if (job.id === 'barb') barberChair(p, t, working);
     if (job.id === 'content') contentRig(p, t, working);
   }
@@ -76,22 +80,21 @@ export function drawJobScene(p: Painter, t: number, dt: number): void {
   // you
   if (me.x > -40 && me.x < LW + 40) {
     if (me.riding) bike(p, t);
-    const seated = atWork && (job?.id === 'tailor' || job?.id === 'remote');
-    if (seated) { ctx.fillStyle = '#5b3a22'; ctx.fillRect(me.x - 9, me.y - 6, 18, 8); } // stool
     const pose: Pose | undefined = me.riding ? { kind: 'bars', phase: 0 }
       : working && job?.id === 'content' ? { kind: 'up', phase: ph * .5 }
-      : working ? { kind: 'work', phase: ph * (job?.id === 'remote' ? 2 : 1) } : undefined;
-    const y = me.riding ? me.y - 16 : seated ? me.y + 4 : me.y;
-    p.person(me.x, y, 1.05, pose, job && atWork ? '' : '⬤ ' + G.name); // the job bubble replaces your name while working
+      : working ? { kind: 'work', phase: ph } : undefined;
+    p.person(me.x, me.riding ? me.y - 16 : me.y, 1.05, pose, job && atWork ? '' : '⬤ ' + G.name); // the job bubble replaces your name while working
   }
 
-  // props in front of you
-  if (job && atWork) {
-    if (job.id === 'pos') posStand(p, t, working, 'front');
-    if (job.id === 'tailor') sewingTable(p, t, working);
-    if (job.id === 'remote') laptopTable(p, t, working);
-  }
+  shown = { atWork, stalled };
+}
 
+/** What drawJobScene saw this frame, for the overlay drawn after lighting. */
+let shown = { atWork: false, stalled: false };
+
+/** Bubbles and pay pops: drawn after the lighting so they stay readable in the dark. */
+export function drawJobOverlay(p: Painter, t: number): void {
+  const { ctx } = p, job = currentHustle(), { atWork, stalled } = shown;
   // status bubble over your head, or a note on your house while you're off delivering
   if (job) {
     const label = stalled ? '⏳ Waiting for light…' : job.verb;
@@ -127,34 +130,6 @@ function bubble(p: Painter, x: number, y: number, text: string, progress: number
 
 /* ---------- the workplaces ---------- */
 
-function posStand(p: Painter, t: number, working: boolean, layer: 'back' | 'front'): void {
-  const { ctx } = p, s = SPOT.pos;
-  if (layer === 'back') {
-    // umbrella
-    ctx.strokeStyle = '#444'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(s.x + 30, s.y + 8); ctx.lineTo(s.x + 30, s.y - 78); ctx.stroke();
-    ['#e63946', '#ffb347', '#e63946', '#ffb347'].forEach((c, i) => {
-      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(s.x + 30, s.y - 86);
-      ctx.lineTo(s.x - 20 + i * 25, s.y - 64); ctx.lineTo(s.x + 5 + i * 25, s.y - 64); ctx.closePath(); ctx.fill();
-    });
-    // customers: walk up, pay, walk away — one every 5s
-    if (!working) return;
-    const cycle = 5, k = Math.floor(t / cycle), f = (t % cycle) / cycle;
-    const standX = s.x - 52, startX = -30;
-    const cx = f < .35 ? startX + (standX - startX) * (f / .35) : f < .7 ? standX : standX - (standX - startX) * ((f - .7) / .3);
-    p.extra(cx, s.y + 10, .9, k % 6, OUTFITS[(k * 7) % OUTFITS.length].id);
-    if (f >= .35 && f < .7) {
-      ctx.font = '800 13px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#7ee787';
-      ctx.fillText('₦', s.x - 26, s.y - 44 - (f - .35) * 60);
-    }
-    return;
-  }
-  // counter in front, with the POS terminal
-  ctx.fillStyle = '#2b6cb0'; ctx.fillRect(s.x - 28, s.y - 22, 56, 26);
-  ctx.fillStyle = '#f5eeda'; ctx.font = '700 8px system-ui'; ctx.textAlign = 'center'; ctx.fillText('POS • TRANSFER', s.x, s.y - 10);
-  ctx.fillStyle = '#222'; ctx.fillRect(s.x - 8, s.y - 30, 14, 9);
-  ctx.fillStyle = working && Math.floor(t * 2) % 2 ? '#5fd068' : '#335'; ctx.fillRect(s.x - 6, s.y - 28, 10, 4);
-}
-
 function barberChair(p: Painter, t: number, working: boolean): void {
   const { ctx } = p, s = SPOT.barb, cx = s.x + 32;
   // pole sign
@@ -171,35 +146,6 @@ function barberChair(p: Painter, t: number, working: boolean): void {
   for (let i = 0; i < 6; i++) { const f = (t * .9 + i / 6) % 1; ctx.fillRect(cx - 8 + i * 3, s.y - 40 + f * 36, 2, 2); }
 }
 
-function sewingTable(p: Painter, t: number, working: boolean): void {
-  const { ctx } = p, s = SPOT.tailor;
-  ctx.fillStyle = '#8b5a2b'; ctx.fillRect(s.x - 26, s.y - 20, 52, 6); ctx.fillRect(s.x - 22, s.y - 14, 4, 16); ctx.fillRect(s.x + 18, s.y - 14, 4, 16);
-  // fabric feeding through
-  const of = OUTFITS[G.outfit], shift = working ? (t * 12) % 16 : 0;
-  ctx.fillStyle = of.c1; ctx.fillRect(s.x - 24, s.y - 24, 48, 4);
-  ctx.fillStyle = of.c2; for (let i = -24; i < 24; i += 16) ctx.fillRect(s.x + i + shift - 8, s.y - 24, 4, 4);
-  // machine
-  // machine sits to your right so your face stays visible
-  ctx.fillStyle = '#e8e8e8'; ctx.fillRect(s.x + 8, s.y - 34, 20, 7); ctx.fillRect(s.x + 22, s.y - 34, 6, 12);
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5; ctx.beginPath();
-  const needle = working ? Math.abs(Math.sin(t * 18)) * 4 : 0;
-  ctx.moveTo(s.x + 11, s.y - 27); ctx.lineTo(s.x + 11, s.y - 25 + needle); ctx.stroke();
-}
-
-function laptopTable(p: Painter, t: number, working: boolean): void {
-  const { ctx } = p, s = SPOT.remote;
-  ctx.fillStyle = '#8b5a2b'; ctx.fillRect(s.x - 24, s.y - 20, 48, 6); ctx.fillRect(s.x - 20, s.y - 14, 4, 16); ctx.fillRect(s.x + 16, s.y - 14, 4, 16);
-  // laptop facing us: screen glows, lines of "code" scroll
-  ctx.fillStyle = '#333'; ctx.fillRect(s.x - 16, s.y - 23, 32, 3);
-  ctx.fillStyle = '#1b2433'; ctx.fillRect(s.x - 14, s.y - 38, 28, 15); // low screen: your face shows above it
-  if (!working) return;
-  const g = ctx.createRadialGradient(s.x, s.y - 30, 2, s.x, s.y - 30, 30);
-  g.addColorStop(0, 'rgba(90,169,255,.35)'); g.addColorStop(1, 'rgba(90,169,255,0)');
-  ctx.fillStyle = g; ctx.fillRect(s.x - 30, s.y - 60, 60, 50);
-  ctx.fillStyle = '#7ee787';
-  for (let i = 0; i < 3; i++) { const w = 6 + ((i * 7 + Math.floor(t * 3)) % 4) * 4; ctx.fillRect(s.x - 11, s.y - 35 + i * 4, w, 2); }
-}
-
 function contentRig(p: Painter, t: number, working: boolean): void {
   const { ctx } = p, s = SPOT.content, tx = s.x + 62;
   // tripod
@@ -208,6 +154,7 @@ function contentRig(p: Painter, t: number, working: boolean): void {
   // ring light behind the phone
   ctx.strokeStyle = working ? '#fff6d8' : '#777'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(tx, s.y - 42, 11, 0, 7); ctx.stroke();
   if (working) {
+    p.light({ x: tx, y: s.y - 42, r: 70, a: .9, color: '#fff6d8' });
     const g = ctx.createRadialGradient(tx, s.y - 42, 4, tx, s.y - 42, 46);
     g.addColorStop(0, 'rgba(255,246,216,.35)'); g.addColorStop(1, 'rgba(255,246,216,0)');
     ctx.fillStyle = g; ctx.fillRect(tx - 50, s.y - 90, 100, 96);

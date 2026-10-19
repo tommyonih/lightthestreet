@@ -1,10 +1,13 @@
 import type { GameState, Settings, Stats, WeekState } from './types';
-import { NPCDEF } from '../data/content';
+import { HUSTLES, NPCDEF, PLACES, type PlaceId } from '../data/content';
 
 const SAVE_KEY = 'luts_save_v1';
 const SETTINGS_KEY = 'luts_settings';
 export const FIRST_MEETING_DAY = 3;
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 8;
+
+/** Places on the map by a given day. */
+export const unlockedBy = (day: number): PlaceId[] => PLACES.filter((p) => p.unlockDay <= day).map((p) => p.id);
 /** "Never happened" for day stamps — far enough back that every cooldown has passed. */
 const NEVER = -99;
 
@@ -52,12 +55,21 @@ export function freshState(): GameState {
     obj: [], log: [], ach: [],
     npcs: NPCDEF.map((n) => ({ id: n.id, rel: 50, owing: false, paid: false, met: false, greetDay: 0, dashDay: 0, mem: [], favourDay: NEVER, grudgeDay: NEVER, coldUntil: 0 })),
     policies: {}, meetings: [], nextMeetingDay: FIRST_MEETING_DAY,
-    job: null, week: emptyWeek(1, 1, 3000, stats), weekHistory: [],
+    job: null, loc: 'street', trip: null, visited: ['street'], unlocked: unlockedBy(1), waypoint: null,
+    week: emptyWeek(1, 1, 3000, stats), weekHistory: [],
   };
 }
 
-export function save(): void { try { localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch { /* storage blocked */ } }
+let saveHook: (() => void) | null = null;
+/** Cloud sync registers here, so core never imports network code. */
+export function onSave(fn: () => void): void { saveHook = fn; }
+
+export function save(): void { try { localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch { /* storage blocked */ } saveHook?.(); }
+/** Replace the local save with one from elsewhere (the cloud) without touching the live game. */
+export function storeSave(s: GameState): void { try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch { /* storage blocked */ } }
 export function clearSave(): void { try { localStorage.removeItem(SAVE_KEY); } catch { /* storage blocked */ } }
+/** How far a save has played, in absolute game minutes. */
+export const gameTime = (s: Pick<GameState, 'day' | 'minute'>): number => s.day * 1440 + s.minute;
 export function loadSave(): GameState | null {
   try { const s = localStorage.getItem(SAVE_KEY); return s ? migrate(JSON.parse(s)) : null; } catch { return null; }
 }
@@ -92,6 +104,13 @@ export function migrate(s: any): GameState {
     s.ver = 5;
   }
   if (s.ver < 6) { s.job = null; s.ver = 6; }
+  if (s.ver < 7) {
+    // someone saved mid-hustle was already "at work", so they wake up at the workplace
+    s.loc = (s.job && HUSTLES.find((h) => h.id === s.job.id)?.place) || 'street';
+    s.trip = null; s.visited = [...new Set(['street', s.loc])]; s.unlocked = unlockedBy(s.day);
+    s.ver = 7;
+  }
+  if (s.ver < 8) { s.waypoint = null; s.ver = 8; }
   s.genOn = false; // nobody leaves a gen running while they're away
   return s as GameState;
 }

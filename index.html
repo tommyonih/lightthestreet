@@ -41,6 +41,7 @@
         <button class="btn" id="btnRules"><i data-icon="check" data-size="18"></i> Rules</button>
         <button class="btn" id="btnSoundW">Sound: <span id="soundStateW">On</span></button>
       </div>
+      <button class="btn" id="btnAccount" style="display:none"><i data-icon="users" data-size="18"></i> <span id="accountState">Sign in to save online</span></button>
       <button class="btn ghost" id="btnInstall" style="display:none"><i data-icon="download" data-size="18"></i> Install app</button>
       <p class="note" id="iosHint" style="display:none">Install: tap <b>Share</b> then <b>Add to Home Screen</b>.</p>
       <p class="note">A comedy survival sim about NEPA, prepaid meters, generators and neighbours.<br>
@@ -53,7 +54,7 @@
     <div class="card">
       <h2>Hold on small 🤚</h2>
       <p style="line-height:1.6">This game is intended for players aged <b>18 or older</b>.
-      We don't collect personal information — just your nickname and your street wahala.</p>
+      No account needed — just your nickname and your street wahala. If you choose to sign in, we keep your email and your save, nothing else.</p>
       <p><b>Confirm say you don reach 18?</b></p>
       <div class="row">
         <button class="btn primary" id="btnAgeYes">Yes, I am 18+</button>
@@ -131,6 +132,10 @@
 
     <div id="stage">
       <canvas id="street"></canvas>
+      <button class="placeChip" id="pillPlace">📍 Your Street</button>
+      <div id="placeCard" aria-live="polite"></div>
+      <button id="minimap" aria-label="Open map"></button>
+      <div id="wpBar"></div>
     </div>
 
     <div id="bar">
@@ -161,7 +166,7 @@
       <button class="tbi sel" data-nav="home" id="tabHome"><i data-icon="home"></i><span>Street</span></button>
       <button class="tbi" data-nav="meter" id="btnPhoneHud"><i data-icon="gauge"></i><span>Meter</span></button>
       <button class="tbi" data-nav="street"><i data-icon="users"></i><span>People</span></button>
-      <button class="tbi" data-nav="week"><i data-icon="trophy"></i><span>Week</span></button>
+      <button class="tbi" data-nav="map"><i data-icon="map"></i><span>Map</span></button>
       <button class="tbi" data-nav="apps"><i data-icon="grid"></i><span>Apps</span></button>
     </nav>
   </div>

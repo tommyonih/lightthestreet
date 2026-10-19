@@ -10,6 +10,7 @@ import { fun, npcDef, npcState, powered, rel } from '../game/helpers';
 import { checkAch, checkObj } from '../game/progress';
 import { moodLabel, recallLine, remember } from '../game/memory';
 import { whereabouts } from '../game/schedule';
+import { atHome, needHome } from '../game/world';
 import { HOUSE_Y, LH, PLAYER_HOUSE, npcAt, toStreet } from '../render/street';
 import { modalOpen, openModal } from './modal';
 import { openPhone } from './phone';
@@ -18,7 +19,7 @@ import { updHUD } from './hud';
 
 export function initStreetClicks(canvas: HTMLCanvasElement): void {
   canvas.addEventListener('click', (e) => {
-    if (!hasGame() || modalOpen) return;
+    if (!hasGame() || modalOpen || !atHome()) return; // away: the place card covers the street
     const { x, y } = toStreet(e);
     const px = PLAYER_HOUSE.x + PLAYER_HOUSE.w;
     const hit = npcAt(x, y); // where neighbours are actually drawn, including while walking
@@ -84,6 +85,7 @@ export function npcClick(id: string): void {
 }
 
 function toggle(key: 'fanOn' | 'tvOn' | 'fridgeOn', label: string): void {
+  if (!needHome('Your switches')) return;
   G[key] = !G[key]; toast(`${label} ${G[key] ? 'on' : 'off'}.`, 'sys'); save(); updHUD();
 }
 
@@ -98,9 +100,9 @@ export function housePanel(): void {
 }
 
 export function genPanel(): void {
-  const noFuel = !G.genOn && G.fuel <= 0;
+  const noFuel = !G.genOn && G.fuel <= 0, home = atHome();
   openModal('🔌 ' + genLabel(), `Fuel: <b>${G.fuel.toFixed(1)}L</b> • Condition: <b>${Math.round(G.genCond)}%</b> • Status: ${G.genOn ? '<span style="color:var(--green)">RUNNING (outdoor ✓)</span>' : '<span style="color:var(--dim)">Off</span>'}<br><span style="font-size:12px;color:var(--dim)">Small gen carries fan+lights only. Big gen carries everything. Keep outdoors, away from windows!</span>`, [
-    { t: G.genOn ? '⏹ Stop generator' : '▶ Start generator', dis: noFuel, sub: noFuel ? 'Need fuel — buy from Shop' : G.genOn ? 'Quiet for the compound' : 'Uses fuel over time', fn: () => { if (G.genOn) stopGen(); else startGen(); } },
+    { t: G.genOn ? '⏹ Stop generator' : '▶ Start generator', dis: noFuel || !home, sub: !home ? 'Your gen dey house — go home first' : noFuel ? 'Need fuel — buy from Shop' : G.genOn ? 'Quiet for the compound' : 'Uses fuel over time', fn: () => { if (G.genOn) stopGen(); else startGen(); } },
     { t: '🔧 Service gen — ₦1,500', dis: G.cash < 1500 || G.gen === 0, fn: repairGen },
     { t: 'Buy fuel (opens shop)', fn: () => openPhone('shop') },
     { t: 'Close' },

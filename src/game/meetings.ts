@@ -13,6 +13,7 @@ import { addFund } from './fund';
 import { hasTrait, npcDef, npcState, rel, trust } from './helpers';
 import { checkAch } from './progress';
 import { GRUDGE, opinion, remember } from './memory';
+import { atHome, comeHome, place } from './world';
 
 export const MEETING_EVERY = 4; // game days between meetings
 export const MEETING_START = 18 * 60, MEETING_END = 21 * 60;
@@ -148,7 +149,9 @@ export function callMeeting(): void {
   sfx.knock();
   const host = G.policies.youChair ? 'You call the street together' : 'Chairman Dele bang the table';
   openModal('🗳️ Street Meeting', `${host}: <i>"Meeting don start! Bring your chair."</i><br><br>On the agenda:<br>${items.map((m) => '• ' + m.title).join('<br>')}`, [
-    { t: '🪑 Attend the meeting', sub: 'Your voice fit change the vote', fn: () => { trust(2); chooseMotion(items); } },
+    atHome()
+      ? { t: '🪑 Attend the meeting', sub: 'Your voice fit change the vote', fn: () => { trust(2); chooseMotion(items); } }
+      : { t: '🏃 Run home & attend', sub: `You dey ${G.trip ? 'road' : place(G.loc).n} — you go reach late, sweating`, fn: () => { comeHome(); trust(1); chooseMotion(items); } },
     { t: 'Skip am — I tire', sub: 'Trust −4. Dem go decide without you.', fn: () => { trust(-4); resolve(items[0], 0, null); } },
   ]);
 }

@@ -8,7 +8,9 @@ import { whereabouts } from '../game/schedule';
 import { ALL_DONE_BONUS, challenge, ensureWeek, progressShare, progressText, weekEndDay } from '../game/challenges';
 import { openShareSheet } from './share';
 import { buyItem, buyUnits, itemPrice, loadToken, UNIT_PRICE } from '../game/economy';
-import { busy, currentHustle, doHustle, jobProgress, jobStalled } from '../game/jobs';
+import { busy, commuting, currentHustle, doHustle, jobProgress, jobStalled } from '../game/jobs';
+import { atHome, deliveryFee, npcPlace, place, setWaypoint, travelling, tripMins } from '../game/world';
+import { mapView, wireMap } from './map';
 import { genLabel, repairGen, startGen, stopGen } from '../game/generator';
 import { npcDef, sunUp } from '../game/helpers';
 import { checkObj } from '../game/progress';
@@ -17,17 +19,23 @@ import { isHeadless, toast } from './toast';
 import { updHUD } from './hud';
 import { icon } from './icons';
 
-export type Tab = 'apps' | 'meter' | 'power' | 'street' | 'week' | 'wallet' | 'shop' | 'hustle' | 'gist' | 'tasks';
+export type Tab = 'apps' | 'meter' | 'power' | 'street' | 'map' | 'week' | 'wallet' | 'shop' | 'hustle' | 'gist' | 'tasks';
 /** The home-screen grid: [tab, label, icon, tile colour]. */
 const APPS: [Exclude<Tab, 'apps'>, string, string, string][] = [
   ['meter', 'Meter', 'gauge', '#e0892f'], ['power', 'Power', 'plug', '#3f7fd8'], ['street', 'People', 'users', '#8a5cd0'],
-  ['week', 'Week', 'trophy', '#d0a52a'], ['wallet', 'Wallet', 'wallet', '#2f9e5a'], ['shop', 'Shop', 'cart', '#d0503f'],
-  ['hustle', 'Hustle', 'briefcase', '#4a6a8a'], ['gist', 'Gist', 'chat', '#2a9ab0'], ['tasks', 'Tasks', 'check', '#6a8a3a'],
+  ['map', 'Map', 'map', '#c0612f'], ['week', 'Week', 'trophy', '#d0a52a'], ['wallet', 'Wallet', 'wallet', '#2f9e5a'],
+  ['shop', 'Shop', 'cart', '#d0503f'], ['hustle', 'Hustle', 'briefcase', '#4a6a8a'], ['gist', 'Gist', 'chat', '#2a9ab0'],
+  ['tasks', 'Tasks', 'check', '#6a8a3a'],
 ];
 /** Apps with their own slot on the tab bar; the rest light up "Apps". */
-const ON_TABBAR: Tab[] = ['meter', 'street', 'week', 'apps'];
+const ON_TABBAR: Tab[] = ['meter', 'street', 'map', 'apps'];
 
 let curTab: Tab = 'meter';
+
+/** Tutorial objectives with a shortcut to the app that does them: [tab, button label]. */
+const TASK_GO: Record<string, [Tab, string]> = {
+  meter: ['meter', '⚡ Open'], buy: ['meter', '⚡ Open'], greet: ['street', '👥 People'], visit: ['map', '🗺️ Map'], gen: ['power', '🔌 Power'],
+};
 
 function policyList(): string[] {
   const p = G.policies, out: string[] = [];
@@ -100,7 +108,8 @@ const views: Record<Tab, () => [string, string]> = {
       <button class="btn small" id="pBank" ${G.pbankCharges > 0 && G.phone < 90 ? '' : 'disabled'}>🔋 Charge phone from power bank (+40%)</button>`;
     if (G.lamp > 0) h += `<div class="stat"><span>Rechargeable lamp 🔦</span><b>Ready</b></div>`;
     h += `<div class="okbox">💡 Appliances: Fan ${G.fanOn ? '✅' : '❌'} • TV ${G.tvOn ? '✅' : '❌'} • Fridge ${G.fridgeOn ? '✅' : '❌'} — tap your house on the street to toggle.</div>
-      <button class="btn primary small" id="pGen">${G.genOn ? '⏹ Stop generator' : '▶ Start generator'}</button>
+      ${atHome() ? '' : '<div class="warnbox">🏠 You no dey house — gen and appliances go wait till you reach.</div>'}
+      <button class="btn primary small" id="pGen" ${atHome() ? '' : 'disabled'}>${G.genOn ? '⏹ Stop generator' : '▶ Start generator'}</button>
       <button class="btn small" id="pRepair">🔧 Service gen (₦1,500)</button>
       <p class="note">Safety: generator stays outdoors, away from windows — always. The game no reward unsafe play.</p>`;
     return ['🔌 Power App', h];
@@ -119,9 +128,12 @@ const views: Record<Tab, () => [string, string]> = {
     h += G.meetings.slice(0, 5).map((r) => `<div class="gistline"><i>Day ${r.day}</i> — ${r.title}: <b style="color:${r.passed ? 'var(--green)' : 'var(--red)'}">${r.passed ? 'PASSED' : 'FAILED'}</b> ${r.yes}–${r.no} <span style="color:var(--dim)">(you: ${r.you})</span></div>`).join('');
     h += `<label class="lbl">Neighbours</label>`;
     G.npcs.forEach((n) => {
-      const d = npcDef(n.id), w = whereabouts(n.id), feel = moodLabel(n.id), m = salient(n.id);
-      h += `<div class="stat"><span>${d.name} <i style="color:var(--dim);font-size:11px">${d.role}</i>${n.owing ? ' <b style="color:var(--red)">OWES</b>' : ''}</span><b>♥${Math.round(n.rel)}</b></div>
-        <div style="font-size:11px;color:var(--dim);margin:-4px 0 6px 4px">${w.at === 'out' ? '🚶' : w.at === 'in' ? '🏠' : '📍'} ${w.act}${feel ? ' • ' + feel : ''}${m ? ` • remembers ${MEMORY[m.kind].note} (Day ${m.day})` : ''}</div>`;
+      const d = npcDef(n.id), w = whereabouts(n.id), feel = moodLabel(n.id), m = salient(n.id), at = npcPlace(n.id);
+      // "Find am" for anyone who's somewhere on the map other than where you are
+      const find = at && !(at === G.loc && !G.trip) && w.at !== 'in' && G.unlocked.includes(at)
+        ? ` <button class="pinBtn${G.waypoint === 'npc:' + n.id ? ' on' : ''}" data-find="${n.id}">📌 Find am</button>` : '';
+      h += `<div class="stat"><span>${d.name} <i style="color:var(--dim);font-size:11px">${d.role}</i>${n.owing ? ' <b style="color:var(--red)">OWES</b>' : ''}${find}</span><b>♥${Math.round(n.rel)}</b></div>
+        <div style="font-size:11px;color:var(--dim);margin:-4px 0 6px 4px">${w.at === 'out' ? (w.place ? `📍 ${place(w.place).n} ·` : '🚶') : w.at === 'in' ? '🏠' : '📍'} ${w.act}${feel ? ' • ' + feel : ''}${m ? ` • remembers ${MEMORY[m.kind].note} (Day ${m.day})` : ''}</div>`;
     });
     h += `<p class="note">Tap neighbours on the street to gist, help, or collect wahala.</p>`;
     return ['🏘️ Street Group', h];
@@ -153,21 +165,22 @@ const views: Record<Tab, () => [string, string]> = {
     return ['💰 Wallet', h];
   },
   shop() {
-    let h = `<p class="note" style="margin-top:0">All prices fictional gameplay items. Solar Dreamer trait = 25% off power gear.</p>`;
+    let h = `<p class="note" style="margin-top:0">All prices fictional gameplay items. Solar Dreamer trait = 25% off power gear. Buy for the Market (fuel: Fuel Station) and you no pay delivery.</p>`;
     SHOP.forEach((it) => {
-      const p = itemPrice(it.id);
-      h += `<button class="btn small" data-shop="${it.id}">${it.n} — ₦${fmt(p)}<div class="evSub">${it.d}${p !== it.p ? ' (discount!)' : ''}</div></button>`;
+      const p = itemPrice(it.id), fee = deliveryFee(it.id);
+      h += `<button class="btn small" data-shop="${it.id}">${it.n} — ₦${fmt(p + fee)}<div class="evSub">${it.d}${p !== it.p ? ' (discount!)' : ''}${fee ? ` · incl. ₦${fee} delivery` : ' · no delivery fee'}</div></button>`;
     });
     return ['🛒 Shop', h];
   },
   hustle() {
     let h = `<p class="note" style="margin-top:0">Make virtual money. Some hustles need light (grid, gen, inverter or solar).${G.bg === 'business' ? ' Business owner: +10% pay, and your shop sells while light dey!' : ''}</p>`;
     const job = currentHustle();
-    if (job) h += `<div class="okbox"><b>${job.verb}</b> — ${jobStalled() ? '⏳ waiting for light…' : Math.round(jobProgress() * 100) + '% done'}<div style="height:7px;background:var(--panel2);border-radius:9px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${Math.round(jobProgress() * 100)}%;background:var(--green)"></div></div></div>`;
+    if (job) h += `<div class="okbox"><b>${job.verb}</b> — ${commuting() ? `🚶 walking to ${place(job.place).n}…` : jobStalled() ? '⏳ waiting for light…' : Math.round(jobProgress() * 100) + '% done'}<div style="height:7px;background:var(--panel2);border-radius:9px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${Math.round(jobProgress() * 100)}%;background:var(--green)"></div></div></div>`;
     HUSTLES.forEach((x) => {
       const cd = Math.max(0, (G.hustleCd[x.id] || 0) - T());
       const wait = cd >= 60 ? Math.floor(cd / 60) + 'h ' + Math.round(cd % 60) + 'm' : Math.ceil(cd) + ' min';
-      h += `<button class="btn small" data-hustle="${x.id}" ${cd > 0 || busy() ? 'disabled' : ''}>${x.n} — ₦${x.pay[0]}–${x.pay[1]}${x.need === 'any' ? ' ⚡needs light' : ''}${x.phone ? ' 📱' : ''}<div class="evSub">${cd > 0 ? 'Ready in ' + wait + ' (game time)' : x.d} • takes ~${x.mins / 60}h</div></button>`;
+      const where = `📍 ${place(x.place).n}${G.loc === x.place && !G.trip ? ' (you dey here)' : ` · ${tripMins(G.loc, x.place, 'walk')} min waka`}`;
+      h += `<button class="btn small" data-hustle="${x.id}" ${cd > 0 || busy() || travelling() ? 'disabled' : ''}>${x.n} — ₦${x.pay[0]}–${x.pay[1]}${x.need === 'any' ? ' ⚡needs light' : ''}${x.phone ? ' 📱' : ''}<div class="evSub">${cd > 0 ? 'Ready in ' + wait + ' (game time)' : x.d} • takes ~${x.mins / 60}h<br>${where}</div></button>`;
     });
     return ['💼 Hustles', h];
   },
@@ -177,9 +190,13 @@ const views: Record<Tab, () => [string, string]> = {
     h += G.log.slice(0, 15).map((l) => `<div class="gistline"><i>${l.t}</i> — ${l.txt}</div>`).join('') || '<div class="gistline">Quiet… too quiet. NEPA must be planning something.</div>';
     return ['💬 Gist & News', h];
   },
+  map: mapView,
   tasks() {
     let h = `<label class="lbl">Tutorial objectives (rewards!)</label>`;
-    G.obj.forEach((o) => { h += `<div class="stat"><span>${o.done ? '✅' : '⬜'} ${o.t}</span><b>₦${o.rw}</b></div>`; });
+    G.obj.forEach((o) => {
+      const go = !o.done && TASK_GO[o.id] ? ` <button class="pinBtn" data-go="${TASK_GO[o.id][0]}">${TASK_GO[o.id][1]}</button>` : '';
+      h += `<div class="stat"><span>${o.done ? '✅' : '⬜'} ${o.t}${go}</span><b>₦${o.rw}</b></div>`;
+    });
     h += `<label class="lbl">Achievements (${G.ach.length}/${ACH.length})</label>`;
     ACH.forEach((a) => {
       const got = G.ach.includes(a.id);
@@ -216,4 +233,9 @@ export function renderPhone(tab?: Tab): void {
   });
   b.querySelectorAll<HTMLElement>('[data-shop]').forEach((e) => { e.onclick = () => buyItem(e.dataset.shop!); });
   b.querySelectorAll<HTMLElement>('[data-hustle]').forEach((e) => { e.onclick = () => doHustle(HUSTLES.find((x) => x.id === e.dataset.hustle)!); });
+  if (curTab === 'map') wireMap(b, () => renderPhone());
+  b.querySelectorAll<HTMLElement>('[data-find]').forEach((e) => {
+    e.onclick = () => { const w = `npc:${e.dataset.find}` as const; setWaypoint(G.waypoint === w ? null : w); };
+  });
+  b.querySelectorAll<HTMLElement>('[data-go]').forEach((e) => { e.onclick = () => renderPhone(e.dataset.go as Tab); });
 }

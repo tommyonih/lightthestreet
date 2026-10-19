@@ -3,7 +3,9 @@ import { $, esc, fmt } from '../core/util';
 import { NEWS } from '../data/content';
 import { hourNow } from '../game/helpers';
 import { jobProgress, jobStalled } from '../game/jobs';
+import { atHome } from '../game/world';
 import { icon } from './icons';
+import { placeChip, updGuide, updPlaceCard } from './map';
 import { feed, isHeadless } from './toast';
 
 const WEATHER_ICON = { sunny: '☀️', hot: '🔥', rain: '🌧️', storm: '⛈️' } as const;
@@ -26,6 +28,8 @@ export function updHUD(): void {
   const h = Math.floor(hourNow()), m = G.minute % 60;
   $('#pillTime').textContent = `Day ${G.day} • ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   $('#pillWeather').textContent = `${WEATHER_ICON[G.weather]} ${G.temp}°C`;
+  const chip = $('#pillPlace'); chip.textContent = placeChip(); chip.hidden = !atHome(); // away, the place card says where you are
+  updPlaceCard(); updGuide();
   $('#hudName').textContent = G.name;
   $('#hudAva').textContent = (G.name.trim()[0] || '?').toUpperCase();
 

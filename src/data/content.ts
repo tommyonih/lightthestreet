@@ -20,8 +20,9 @@ export interface NpcDef {
 }
 /** Where a neighbour is: on their porch, out of the street, or indoors. */
 export type Spot = 'porch' | 'out' | 'in';
-/** One block of a daily routine, in whole hours [from, to). Hours not covered are spent indoors. */
-export interface Slot { from: number; to: number; at: Spot; act: string }
+/** One block of a daily routine, in whole hours [from, to). Hours not covered are spent indoors.
+    `place` says where an `out` slot happens, so you can go and find them; absent = somewhere off the map. */
+export interface Slot { from: number; to: number; at: Spot; act: string; place?: PlaceId }
 export interface Routine { day: Slot[]; sunday?: Slot[] }
 
 export type MemKind =
@@ -46,6 +47,21 @@ export interface Hustle {
   mins: number;
   /** Shown over your head while you work. */
   verb: string;
+  /** Where the work happens; starting the hustle walks you there. */
+  place: PlaceId;
+}
+
+export type PlaceId = 'street' | 'junction' | 'market' | 'fuel' | 'disco' | 'campus' | 'church';
+export interface Place {
+  id: PlaceId; n: string; emoji: string; blurb: string;
+  /** Opening hours [from, to) in whole hours, optionally only on some days. Absent = always open. */
+  open?: { from: number; to: number; days?: 'weekdays' | 'sunday' };
+  /** Game day it appears on the map. */
+  unlockDay: number;
+  /** What powers work done here: your own supply, the area grid, or the place's own generator. */
+  power: 'home' | 'grid' | 'gen';
+  /** Position on the map, as fractions of its width and height. */
+  mx: number; my: number;
 }
 export interface ShopItem { id: string; n: string; p: number; d: string }
 export interface Achievement { id: string; n: string; d: string; ck: (G: GameState) => boolean }
@@ -130,12 +146,12 @@ export const NPCDEF: NpcDef[] = [
 export const ROUTINES: Record<string, Routine> = {
   landlord: {
     day: [{ from: 6, to: 9, at: 'porch', act: 'Sweeping the compound' }, { from: 9, to: 13, at: 'out', act: 'Collecting rent for his other house' }, { from: 13, to: 22, at: 'porch', act: 'Watching who dey enter compound' }],
-    sunday: [{ from: 6, to: 8, at: 'porch', act: 'Dressing for church' }, { from: 8, to: 12, at: 'out', act: 'At church' }, { from: 12, to: 22, at: 'porch', act: 'Resting after church' }] },
+    sunday: [{ from: 6, to: 8, at: 'porch', act: 'Dressing for church' }, { from: 8, to: 12, at: 'out', act: 'At church', place: 'church' }, { from: 12, to: 22, at: 'porch', act: 'Resting after church' }] },
   broke: {
-    day: [{ from: 6, to: 11, at: 'in', act: 'Sleeping late' }, { from: 11, to: 16, at: 'out', act: 'Looking for work (or so he say)' }, { from: 16, to: 23, at: 'porch', act: 'Gisting & begging small' }] },
+    day: [{ from: 6, to: 11, at: 'in', act: 'Sleeping late' }, { from: 11, to: 16, at: 'out', act: 'Looking for work (or so he say)', place: 'junction' }, { from: 16, to: 23, at: 'porch', act: 'Gisting & begging small' }] },
   gist: {
-    day: [{ from: 7, to: 10, at: 'out', act: 'At the market — collecting gist' }, { from: 10, to: 21, at: 'porch', act: 'Broadcasting gist' }],
-    sunday: [{ from: 8, to: 12, at: 'out', act: 'At church (front row)' }, { from: 12, to: 21, at: 'porch', act: 'Reviewing who wear wetin for church' }] },
+    day: [{ from: 7, to: 10, at: 'out', act: 'At the market — collecting gist', place: 'market' }, { from: 10, to: 21, at: 'porch', act: 'Broadcasting gist' }],
+    sunday: [{ from: 8, to: 12, at: 'out', act: 'At church (front row)', place: 'church' }, { from: 12, to: 21, at: 'porch', act: 'Reviewing who wear wetin for church' }] },
   remote: {
     day: [{ from: 8, to: 12, at: 'in', act: 'On work calls' }, { from: 12, to: 13, at: 'porch', act: 'Lunch break' }, { from: 13, to: 18, at: 'in', act: 'On work calls' }, { from: 18, to: 22, at: 'porch', act: 'Logged off, finally' }],
     sunday: [{ from: 10, to: 22, at: 'porch', act: 'Weekend mode' }] },
@@ -144,19 +160,36 @@ export const ROUTINES: Record<string, Routine> = {
     sunday: [{ from: 14, to: 20, at: 'porch', act: 'Sunday cuts' }] },
   elder: {
     day: [{ from: 6, to: 8, at: 'porch', act: 'Morning walk & radio news' }, { from: 8, to: 12, at: 'in', act: 'Resting' }, { from: 12, to: 21, at: 'porch', act: 'Sitting under the tree, giving advice' }],
-    sunday: [{ from: 7, to: 11, at: 'out', act: 'At church' }, { from: 11, to: 21, at: 'porch', act: 'Sunday stories' }] },
+    sunday: [{ from: 7, to: 11, at: 'out', act: 'At church', place: 'church' }, { from: 11, to: 21, at: 'porch', act: 'Sunday stories' }] },
   chairman: {
     day: [{ from: 7, to: 17, at: 'out', act: 'At the office' }, { from: 17, to: 22, at: 'porch', act: 'Doing street politics' }],
-    sunday: [{ from: 8, to: 12, at: 'out', act: 'At church, greeting everybody' }, { from: 12, to: 22, at: 'porch', act: 'Planning the next meeting' }] },
+    sunday: [{ from: 8, to: 12, at: 'out', act: 'At church, greeting everybody', place: 'church' }, { from: 12, to: 22, at: 'porch', act: 'Planning the next meeting' }] },
   solar: {
     day: [{ from: 7, to: 21, at: 'porch', act: 'Watching her solar panels charge' }] },
   student: {
-    day: [{ from: 7, to: 14, at: 'out', act: 'At lectures' }, { from: 14, to: 23, at: 'porch', act: 'Reading for exams' }],
+    day: [{ from: 7, to: 14, at: 'out', act: 'At lectures', place: 'campus' }, { from: 14, to: 23, at: 'porch', act: 'Reading for exams' }],
     sunday: [{ from: 9, to: 23, at: 'porch', act: 'Reading — exams no dey rest' }] },
   helpful: {
     day: [{ from: 6, to: 20, at: 'porch', act: 'Cooking at her food stand' }, { from: 20, to: 22, at: 'porch', act: 'Sharing leftover soup' }],
-    sunday: [{ from: 7, to: 11, at: 'out', act: 'At church' }, { from: 11, to: 21, at: 'porch', act: 'Cooking Sunday rice' }] },
+    sunday: [{ from: 7, to: 11, at: 'out', act: 'At church', place: 'church' }, { from: 11, to: 21, at: 'porch', act: 'Cooking Sunday rice' }] },
 };
+
+/** The neighbourhood. Your street is home; the rest are errands, hustles and people to find. */
+export const PLACES: Place[] = [
+  { id: 'street', n: 'Your Street', emoji: '🏠', blurb: 'Home. Your meter, your gen, your wahala.', unlockDay: 1, power: 'home', mx: .3, my: .78 },
+  { id: 'junction', n: 'The Junction', emoji: '🛵', blurb: 'Okada rank, POS stands, and people wey dey "look for work".', unlockDay: 1, power: 'grid', mx: .5, my: .5 },
+  { id: 'market', n: 'Market', emoji: '🧺', blurb: 'Buka food, tailors, and the shop wey sell everything. Gist free.', open: { from: 7, to: 19 }, unlockDay: 1, power: 'grid', mx: .13, my: .42 },
+  { id: 'fuel', n: 'Fuel Station', emoji: '⛽', blurb: 'Fuel for your gen. Queue na free, patience no free.', open: { from: 6, to: 22 }, unlockDay: 1, power: 'gen', mx: .87, my: .44 },
+  { id: 'campus', n: 'Campus & Cyber Café', emoji: '🎓', blurb: 'The cyber café get gen and fast-ish wifi. Students everywhere.', open: { from: 7, to: 22 }, unlockDay: 2, power: 'gen', mx: .76, my: .14 },
+  { id: 'disco', n: 'DisCo Office', emoji: '🏢', blurb: 'Fictional power company. Customer care go "escalate am".', open: { from: 9, to: 16, days: 'weekdays' }, unlockDay: 2, power: 'gen', mx: .72, my: .8 },
+  { id: 'church', n: 'Church', emoji: '⛪', blurb: 'Sunday morning service. Everybody for street dey here, dressed to kill.', open: { from: 7, to: 12, days: 'sunday' }, unlockDay: 6, power: 'grid', mx: .3, my: .13 },
+];
+
+/** Walking routes between places, in game minutes. Everything goes through the junction. */
+export const PATHS: [PlaceId, PlaceId, number][] = [
+  ['street', 'junction', 10], ['junction', 'market', 12], ['junction', 'fuel', 8],
+  ['junction', 'campus', 14], ['junction', 'disco', 12], ['junction', 'church', 10],
+];
 
 /** What neighbours remember about you. Positive = goodwill, negative = grudge. */
 export const MEMORY: Record<MemKind, MemoryDef> = {
@@ -179,12 +212,12 @@ export const MEMORY: Record<MemKind, MemoryDef> = {
 };
 
 export const HUSTLES: Hustle[] = [
-  { id: 'pos', n: 'POS / Transfer stand', pay: [350, 900], cd: 240, need: null, phone: true, d: 'Collect small change for people. Phone must get battery.', mins: 120, verb: '🏧 Running POS' },
-  { id: 'deliver', n: 'Delivery runs', pay: [300, 700], cd: 180, need: null, phone: true, d: 'Bike errands around the junction. Customers call your phone.', mins: 90, verb: '🛵 Out on delivery' },
-  { id: 'barb', n: 'Barbing (borrow Skippo’s shop)', pay: [600, 1400], cd: 360, need: 'any', d: 'Needs light — grid or generator.', mins: 120, verb: '💈 Barbing' },
-  { id: 'tailor', n: 'Sewing & adjustments', pay: [500, 1100], cd: 300, need: 'any', d: 'Needs light for the machine.', mins: 150, verb: '🧵 Sewing' },
-  { id: 'content', n: 'Content creation', pay: [800, 2000], cd: 480, need: 'any', phone: true, d: 'Shoot skits. Light = camera = action.', mins: 180, verb: '🎬 Shooting skit' },
-  { id: 'remote', n: 'Freelance gig online', pay: [1000, 2500], cd: 600, need: 'any', phone: true, d: 'Laptop + light + hotspot = dollars, sorry, naira.', mins: 240, verb: '💻 Freelance gig' },
+  { id: 'pos', n: 'POS / Transfer stand', pay: [350, 900], cd: 240, need: null, phone: true, d: 'Collect small change for people. Phone must get battery.', mins: 120, verb: '🏧 Running POS', place: 'junction' },
+  { id: 'deliver', n: 'Delivery runs', pay: [300, 700], cd: 180, need: null, phone: true, d: 'Bike errands around the junction. Customers call your phone.', mins: 90, verb: '🛵 Out on delivery', place: 'junction' },
+  { id: 'barb', n: 'Barbing (borrow Skippo’s shop)', pay: [600, 1400], cd: 360, need: 'any', d: 'Needs light — grid or generator.', mins: 120, verb: '💈 Barbing', place: 'street' },
+  { id: 'tailor', n: 'Sewing & adjustments', pay: [500, 1100], cd: 300, need: 'any', d: 'Market stall. The machine needs NEPA light — your gen no reach market.', mins: 150, verb: '🧵 Sewing', place: 'market' },
+  { id: 'content', n: 'Content creation', pay: [800, 2000], cd: 480, need: 'any', phone: true, d: 'Shoot skits. Light = camera = action.', mins: 180, verb: '🎬 Shooting skit', place: 'street' },
+  { id: 'remote', n: 'Freelance gig online', pay: [1000, 2500], cd: 600, need: 'any', phone: true, d: 'Cyber café get gen. Laptop + hotspot = dollars, sorry, naira.', mins: 240, verb: '💻 Freelance gig', place: 'campus' },
 ];
 
 export const SHOP: ShopItem[] = [

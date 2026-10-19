@@ -1,4 +1,4 @@
-import type { MemKind } from '../data/content';
+import type { MemKind, PlaceId } from '../data/content';
 
 export type Weather = 'sunny' | 'hot' | 'rain' | 'storm';
 
@@ -43,6 +43,19 @@ export interface Flags {
   transformerDone?: boolean;
   emekaUnits?: number;
   tokDay?: number;
+  /** Last day each once-a-day place action was used, keyed by action id. */
+  did?: Record<string, number>;
+}
+
+export type Waypoint = PlaceId | `npc:${string}`;
+
+/** A walk or okada ride between places. Times are absolute game minutes. */
+export interface Trip {
+  from: PlaceId;
+  to: PlaceId;
+  mode: 'walk' | 'okada';
+  at: number;
+  until: number;
 }
 
 /** Street rules passed at meetings. Absent = never passed. */
@@ -158,6 +171,14 @@ export interface GameState {
   meetings: MeetingRecord[];
   nextMeetingDay: number;
   job: Job | null;
+  /** Where you are. While `trip` is set you're on the road and `loc` is where you left from. */
+  loc: PlaceId;
+  trip: Trip | null;
+  visited: PlaceId[];
+  /** Places shown on the map. */
+  unlocked: PlaceId[];
+  /** Where the map is guiding you: a place, or `npc:<id>` to follow a neighbour. Cleared on arrival. */
+  waypoint: Waypoint | null;
   week: WeekState;
   weekHistory: { n: number; done: number; total: number }[];
   resText?: string;

@@ -1,12 +1,13 @@
 /* Where each neighbour is right now: their routine, bent by what's happening on the street. */
 import { G } from '../core/state';
-import { ROUTINES, type Spot } from '../data/content';
+import { ROUTINES, type PlaceId, type Spot } from '../data/content';
 import { hourNow, streetLit } from './helpers';
 import { opinion, GRUDGE } from './memory';
 
 /** 'outside' = chairs pulled out near the road (heat, streetlight). */
 export type Place = Spot | 'outside';
-export interface Whereabouts { at: Place; act: string }
+/** `place` is set when they're `out` somewhere on the map. */
+export interface Whereabouts { at: Place; act: string; place?: PlaceId }
 
 export function isSunday(): boolean { return G.day % 7 === 0; }
 
@@ -14,7 +15,7 @@ function routineSlot(id: string, h: number): Whereabouts {
   const r = ROUTINES[id];
   const slots = (isSunday() && r?.sunday) || r?.day || [];
   const s = slots.find((x) => h >= x.from && h < x.to);
-  if (s) return { at: s.at, act: s.act };
+  if (s) return { at: s.at, act: s.act, place: s.place };
   return { at: 'in', act: h < 6 || h >= 21 ? 'Sleeping' : 'Indoors' };
 }
 

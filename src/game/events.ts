@@ -9,6 +9,7 @@ import { updHUD } from '../ui/hud';
 import { addCash } from './economy';
 import { addFund, npcPays, SHARE, startFundDrive } from './fund';
 import { startGen } from './generator';
+import { atHome } from './world';
 import { cooling, fun, hasTrait, mood, npcDef, npcState, powered, rel, trust } from './helpers';
 import { checkAch } from './progress';
 import { doFavour, doGrudge, favourCandidate, grudgeCandidate, remember } from './memory';
@@ -131,7 +132,7 @@ export const EVENTS: GameEvent[] = [
   { id: 'football', cd: 700, w: 2, cond: () => !G.gridOn && !G.genOn && G.minute > 15 * 60 && G.minute < 21 * 60,
     run() {
       openModal('⚽ Football Wahala', 'Champions League semi-final, 70th minute, score 1-1 — NEPA take light! The whole street shout at once!', [
-        { t: 'Fire gen now! (Football no get duplicate)', dis: !(G.gen > 0 && G.fuel > 0), fn: () => {
+        { t: 'Fire gen now! (Football no get duplicate)', dis: !(G.gen > 0 && G.fuel > 0) || !atHome(), sub: atHome() ? '' : 'Your gen dey house — you no dey', fn: () => {
           G.tvOn = true; startGen();
           if (G.genOn) { fun(12); mood(8); toast('⚽ You see the winning goal LIVE. History!', 'sys'); }
           updHUD();
@@ -147,7 +148,7 @@ export const EVENTS: GameEvent[] = [
           G.pbankCharges--; rel('student', 15); G.stats.helped++; remember('student', 'lentPowerbank');
           toast('📚 Chidera dey hail your name like national anthem. "I go pass this exam because of you!"', 'sys'); sfx.cheer(); checkAch();
         } },
-        { t: 'Start gen for the compound tonight', dis: !(G.gen > 0 && G.fuel >= 1), sub: '1L fuel, big karma', fn: () => {
+        { t: 'Start gen for the compound tonight', dis: !(G.gen > 0 && G.fuel >= 1) || !atHome(), sub: atHome() ? '1L fuel, big karma' : 'Your gen dey house — you no dey', fn: () => {
           startGen(); if (!G.genOn) return;
           G.fuel = Math.max(0, G.fuel - 1); rel('student', 12); trust(8); G.stats.helped++; remember('student', 'genForCompound'); remember('remote', 'genForCompound');
           toast('🌙 Gen dey run for the whole compound. Chidera dey read, Tunde dey work, everybody hail you!', 'sys'); checkAch();

@@ -11,7 +11,8 @@ import { tick } from './game/sim';
 import { initRenderer } from './render/street';
 import { C, applyCreator, buildCreator, redrawPreview } from './ui/creator';
 import { updHUD, updSoundBtns } from './ui/hud';
-import { genPanel, initStreetClicks } from './ui/interact';
+import { genPanel, initStreetClicks, npcClick } from './ui/interact';
+import { initGuide, initPlaceCard } from './ui/map';
 import { openModal } from './ui/modal';
 import { closePhone, navTo, openPhone, renderPhone } from './ui/phone';
 import { hydrateIcons } from './ui/icons';
@@ -20,6 +21,8 @@ import { copySummary, endSession } from './ui/results';
 import { show, type ScreenId } from './ui/screens';
 import { toast } from './ui/toast';
 import { initShare, openShareSheet } from './ui/share';
+import { initAccountUI } from './ui/account';
+import { deleteCloudSave, fileReport, initCloud } from './net/cloud';
 
 const TICK_MS = 800;
 const INTRO_POLL_MS = 500;
@@ -70,13 +73,14 @@ function wire(): void {
   click('#btnEat', eatAction);
   click('#btnHustle', () => openPhone('hustle'));
   click('#btnSleep', sleepAction);
+  click('#pillPlace', () => openPhone('map'));
   click('#btnEnd', () => openModal('🏁 End this session?', 'Your progress dey saved automatically. You fit continue anytime.', [
-    { t: 'Show my Street Report', fn: endSession }, { t: 'Continue playing' }]));
+    { t: 'Show my Street Report', fn: () => { endSession(); void fileReport({ kind: 'session' }).then((ok) => { if (ok) toast('☁️ Street Report saved to your account.', 'sys'); }); } }, { t: 'Continue playing' }]));
   click('#btnCopy', copySummary);
   click('#btnShareImg', () => openShareSheet({ kind: 'session' }));
   click('#btnResume', () => show('scr-game'));
   click('#btnNewGame', () => openModal('🔄 Start fresh?', 'This go ERASE your current save. Sure sure?', [
-    { t: 'Yes, erase & start new', fn: () => { clearSave(); location.reload(); } }, { t: 'Cancel' }]));
+    { t: 'Yes, erase & start new', fn: () => { clearSave(); void deleteCloudSave().catch(() => {}).finally(() => location.reload()); } }, { t: 'Cancel' }]));
 }
 
 // boot
@@ -86,9 +90,13 @@ wire();
 const street = $<HTMLCanvasElement>('#street');
 initRenderer(street);
 initStreetClicks(street);
+initPlaceCard(npcClick, () => openPhone('map'));
+initGuide();
 updSoundBtns();
 initShare();
 initAppShell();
+initCloud(() => { $('#btnContinue').style.display = 'block'; toast('☁️ Your online save don land. Tap Continue.', 'sys'); });
+initAccountUI();
 window.addEventListener('beforeunload', () => { if (hasGame() && G.intro >= INTRO_DONE) save(); });
 setInterval(tick, TICK_MS);
 setInterval(introStep, INTRO_POLL_MS);

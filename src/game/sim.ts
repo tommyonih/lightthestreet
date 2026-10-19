@@ -15,6 +15,7 @@ import { checkChallenges, weekRollover } from './challenges';
 import { jobTick } from './jobs';
 import { callMeeting, CURFEW_FINE, meetingDue, policiesNewDay, supplyMods } from './meetings';
 import { checkAch, checkObj } from './progress';
+import { atHome, place, suggest, worldTick } from './world';
 
 /** Game minutes advanced per tick. One tick runs every 800ms, so a game hour is ~12s and a day ~4.8 min. */
 export const STEP = 4;
@@ -39,6 +40,9 @@ export function blackoutFX(): void {
   setTimeout(() => { if (G && !G.gridOn) toast('🗣️ ' + pick(NPCDEF).name + ': “' + pick(['My fan just stop! Heat o!', 'Who get extension?!', 'Make we shout together, e fit hear us!']) + '”', 'npc'); }, 4200);
   mood(hasTrait('nepafight') ? -3 : -6);
   if (G.tvOn && G.minute > 17 * 60 && G.minute < 23 * 60) fun(-6);
+  if (!atHome() && G.intro >= 99 && (G.gen > 0 || G.fridgeOn)) {
+    setTimeout(() => toast(`🏃 And you dey ${G.trip ? 'road' : place(G.loc).n}! ${G.gen > 0 ? 'Gen no fit start itself.' : 'Your fridge dey suffer.'}`, 'bad'), 2600);
+  }
   checkObj('blackout');
 }
 
@@ -142,7 +146,7 @@ export function tick(): void {
     G.noise = clamp(G.noise + (G.gen === 2 ? 1.1 : 0.8) * (hasTrait('genking') ? 1.5 : 1), 0, 100);
     G.genCond = clamp(G.genCond - 0.15, 5, 100);
     G.week.c.genMin += STEP;
-    if (G.fuel <= 0) { G.fuel = 0; stopGen(true); toast('⛽ <b>Fuel don finish!</b> Gen cough, shake, and die. During important task again!', 'bad'); sfx.bad(); }
+    if (G.fuel <= 0) { G.fuel = 0; stopGen(true); toast('⛽ <b>Fuel don finish!</b> Gen cough, shake, and die. During important task again!', 'bad'); sfx.bad(); suggest('fuel'); }
     if (G.policies.genCurfew && lateNight && chance(.04)) {
       addCash(-Math.min(CURFEW_FINE, G.cash), 'Gen curfew fine'); trust(-3); mood(-2);
       toast(`🔇 Curfew patrol catch your gen! <b>₦${CURFEW_FINE} fine</b>. "Rule na rule — you sef vote for meeting."`, 'bad'); sfx.bad();
@@ -186,6 +190,7 @@ export function tick(): void {
   // scheduled street meeting, otherwise random events
   if (G.intro >= 99 && meetingDue()) callMeeting();
   else if (G.intro >= 99 && chance(EVENT_CHANCE)) rollEvent();
+  worldTick(); // before jobTick, so work starts the tick you arrive
   jobTick(STEP);
   checkChallenges();
   checkAch();

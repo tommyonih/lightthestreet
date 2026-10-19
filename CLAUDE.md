@@ -1,0 +1,79 @@
+# CLAUDE.md — Light Up the Street
+
+A comedy survival sim about NEPA, prepaid meters, generators and neighbours, built as an installable phone-style web app. All money, units and tokens are fictional.
+
+Read these before planning a feature:
+- [docs/PLAN.md](docs/PLAN.md): features, screens, save schema, tech decisions, roadmap
+- [docs/DESIGN.md](docs/DESIGN.md): look, feel, tone and UI rules
+
+## Commands
+
+```sh
+npm run dev        # Vite dev server
+npm test           # Vitest + jsdom: headless week-long play-throughs, balance checks, regressions
+npm run typecheck  # tsc --noEmit (covers src/ AND tests/)
+npm run build      # typecheck + production build to dist/ (this is what Vercel runs)
+```
+
+A change is done only when `npm test` and `npm run build` both pass. Deploys go out from `main` on Vercel (github.com/Marvellousabio/lightthestreet).
+
+## Stack and hard rules
+
+- Vanilla TypeScript, Vite, HTML/CSS and Canvas 2D. **No framework.** The only runtime dependency is `@supabase/supabase-js`, loaded lazily. Don't add a package without asking.
+- The game must work fully offline and signed out. `localStorage` is the live save; wrap every storage call in try/catch, as `src/core/state.ts` does.
+- Supabase (optional accounts, cloud save, reports) lives in `src/net/` and `supabase/`; see [supabase/README.md](supabase/README.md). `core/` and `game/` never import `net/`. Network code plugs in through hooks (`onSave`, `onWeekEnd`). Every cloud feature must no-op when `cloudEnabled()` is false (as in tests and local dev without `.env.local`).
+- Schema changes go in a **new** file in `supabase/migrations/`. Every table gets RLS with owner-only policies in the same migration. Only the anon key goes in the client; never the service_role key.
+- Offline-first PWA: `public/sw.js` caches the app shell. If you add a static asset the app needs offline, add it there and bump the cache name.
+- `light-up-the-street.html` is the **legacy single-file version**. Don't edit it or port features back into it.
+
+## Where things go
+
+| Adding… | Put it in |
+|---|---|
+| Neighbours, dialogue, hustles, shop items, traits, backgrounds, achievements, routines, memory kinds | `src/data/content.ts` (data only, no logic) |
+| A street event | append to `EVENTS` in `src/game/events.ts` |
+| A meeting motion | append to `MOTIONS` in `src/game/meetings.ts`, with a stance for every neighbour |
+| A weekly challenge | append to `CHALLENGES` in `src/game/challenges.ts` |
+| A place on the map | `PLACES` + a route in `PATHS` (`src/data/content.ts`); things to do there go in `PLACE_ACTIONS` in `src/game/world.ts` |
+| Game rules or simulation | `src/game/` (one file per system; `sim.ts` owns `tick()`) |
+| Shared types / state / save / audio / haptics | `src/core/` |
+| Anything drawn on a canvas | `src/render/` |
+| Supabase client, auth, cloud save/reports | `src/net/` (`supabase.ts`, `auth.ts`, `cloud.ts`) |
+| Database tables, RLS, storage policies | `supabase/migrations/` |
+| DOM UI: sheets, modals, HUD, phone apps | `src/ui/`. New phone apps go in `src/ui/phone.ts` (`Tab`, `APPS`, render map) |
+| App-chrome icons | `src/ui/icons.ts`, used as `<i data-icon="name">` |
+| Static markup for screens | `index.html` |
+| Styles | `src/styles.css`, using the `:root` tokens |
+| Tests | `tests/*.test.ts`, using `useHeadlessGame()` from `tests/harness.ts` |
+
+Dependency direction: `data` → `core` → `game` → `render` → `net` → `ui` → `main.ts`. `src/game/` must not touch the DOM directly. It goes through `toast`, `openModal` and the HUD helpers, which the tests stub out.
+
+## Changing game state (important)
+
+- `G` in `src/core/state.ts` is the single live game state, and it is a live ES-module binding. Import it; never copy it.
+- Adding or renaming a field in `GameState`:
+  1. update `src/core/types.ts`
+  2. give it a default in `freshState()`
+  3. bump `SAVE_VERSION` and add an `if (s.ver < N)` step to `migrate()` so old saves keep working
+  4. add a test that migrates an old-version save if the step does anything beyond setting defaults
+- Scheduled times are **absolute game minutes** (`T()` = `day*1440 + minute`), never minute-of-day.
+- Day stamps that mean "never" use `NEVER` (-99), not 0.
+
+## Testing
+
+- Test seams: `setModalDriver` (auto-answers modals), `setHeadless` (silences toasts), `setScreenGate`. Use them, not mocks of game modules.
+- The balance tests check grid uptime, blackouts per day, meter safety and event frequency. If a balance change breaks them, either retune the change or explain why the threshold should move. Don't loosen a threshold silently.
+- After changing anything in `src/render/`, run the app (`npm run dev`) and look at it. Tests don't check visuals.
+
+## Code style
+
+- Match the surrounding code: compact, data-driven, short JSDoc on non-obvious fields, comments that explain *why*.
+- Player-facing text uses light Nigerian Pidgin and humour (see DESIGN.md → Voice). Code, comments and commit messages are in plain English.
+- Respect `SET.motion` (and `prefers-reduced-motion`) for any new animation or particle effect, and `SET.sound` for audio.
+- Escape user-provided strings (player name) with `esc()` before putting them in HTML.
+
+## Working style
+
+- Work through the roadmap in PLAN.md one step at a time. Finish and verify a step before starting the next.
+- Keep commits small and named for what they do. Don't commit or push unless asked.
+- Update the README layout table and this file when you add a new folder or a new extension point.

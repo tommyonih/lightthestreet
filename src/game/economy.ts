@@ -7,6 +7,7 @@ import { toast } from '../ui/toast';
 import { updHUD } from '../ui/hud';
 import { dayTime, hasTrait } from './helpers';
 import { checkAch, checkObj } from './progress';
+import { deliveryFee, feeNote } from './world';
 
 export const UNIT_PRICE = 350;
 
@@ -41,10 +42,10 @@ export function itemPrice(id: string): number {
 }
 
 export function buyItem(id: string): void {
-  const it = SHOP.find((s) => s.id === id)!; const p = itemPrice(id);
-  openModal('🛒 ' + it.n, `${it.d}<br><br>Price: <b>₦${fmt(p)}</b> (fictional) ${p !== it.p ? '<span style="color:var(--green)">— Solar Dreamer discount!</span>' : ''}<br>You have ₦${fmt(G.cash)}.`, [
+  const it = SHOP.find((s) => s.id === id)!, fee = deliveryFee(id), p = itemPrice(id) + fee;
+  openModal('🛒 ' + it.n, `${it.d}<br><br>Price: <b>₦${fmt(p)}</b> (fictional) ${itemPrice(id) !== it.p ? '<span style="color:var(--green)">— Solar Dreamer discount!</span>' : ''}<br><span style="font-size:12px;color:var(--dim)">${feeNote(id)}</span><br>You have ₦${fmt(G.cash)}.`, [
     { t: `Buy — ₦${fmt(p)}`, dis: G.cash < p, fn: () => {
-      addCash(-p, it.n); sfx.cash();
+      addCash(-p, it.n + (fee ? ' + delivery' : '')); sfx.cash();
       if (id === 'fuel3') { G.fuel += 3; toast('⛽ 3 litres fuel added. Keep gen outdoors o!', 'sys'); }
       if (id === 'lamp') { G.lamp = 1; toast('🔦 Rechargeable lamp acquired. Darkness no be your mate again.', 'sys'); }
       if (id === 'powerbank') { G.powerbank = 1; G.pbankCharges = 2; toast('🔋 Power bank! 2 emergency charges per day.', 'sys'); }

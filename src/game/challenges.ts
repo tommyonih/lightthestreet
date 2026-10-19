@@ -124,8 +124,13 @@ export function weekRollover(): void {
   G.week = emptyWeek(n, G.day, G.cash, G.stats);
   ensureWeek();
   checkAch(); save(); updHUD();
+  weekEnd?.(old);
   showWeekSummary(old, done);
 }
+
+let weekEnd: ((w: WeekState) => void) | null = null;
+/** Cloud sync registers here to file a week report. */
+export function onWeekEnd(fn: (w: WeekState) => void): void { weekEnd = fn; }
 
 let shareWeek: ((w: WeekState) => void) | null = null;
 /** The share sheet registers itself here, so this module stays free of rendering code. */
