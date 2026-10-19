@@ -2,12 +2,13 @@
 import { G, T, hasGame } from '../core/state';
 import { $, clamp, fmt } from '../core/util';
 import { sfx } from '../core/audio';
-import { ACH, HUSTLES, MEMORY, NEWS, SHOP } from '../data/content';
+import { ACH, DATA_BUNDLES, HUSTLES, MEMORY, NEWS, SHOP } from '../data/content';
 import { moodLabel, salient } from '../game/memory';
 import { whereabouts } from '../game/schedule';
 import { ALL_DONE_BONUS, challenge, ensureWeek, progressShare, progressText, weekEndDay } from '../game/challenges';
 import { openShareSheet } from './share';
-import { buyItem, buyUnits, itemPrice, loadToken, UNIT_PRICE } from '../game/economy';
+import { buyData, buyItem, buyUnits, dataLabel, itemPrice, loadToken, partnerLink, UNIT_PRICE } from '../game/economy';
+import { dealModal, dealTaken, todaysDeals } from '../game/orders';
 import { busy, commuting, currentHustle, doHustle, jobProgress, jobStalled } from '../game/jobs';
 import { atHome, deliveryFee, npcPlace, place, setWaypoint, travelling, tripMins } from '../game/world';
 import { mapView, wireMap } from './map';
@@ -22,7 +23,7 @@ import { icon } from './icons';
 export type Tab = 'apps' | 'meter' | 'power' | 'street' | 'map' | 'week' | 'wallet' | 'shop' | 'hustle' | 'gist' | 'tasks';
 /** The home-screen grid: [tab, label, icon, tile colour]. */
 const APPS: [Exclude<Tab, 'apps'>, string, string, string][] = [
-  ['meter', 'Meter', 'gauge', '#e0892f'], ['power', 'Power', 'plug', '#3f7fd8'], ['street', 'People', 'users', '#8a5cd0'],
+  ['meter', 'NextPawa', 'zap', '#f2a21b'], ['power', 'Power', 'plug', '#3f7fd8'], ['street', 'People', 'users', '#8a5cd0'],
   ['map', 'Map', 'map', '#c0612f'], ['week', 'Week', 'trophy', '#d0a52a'], ['wallet', 'Wallet', 'wallet', '#2f9e5a'],
   ['shop', 'Shop', 'cart', '#d0503f'], ['hustle', 'Hustle', 'briefcase', '#4a6a8a'], ['gist', 'Gist', 'chat', '#2a9ab0'],
   ['tasks', 'Tasks', 'check', '#6a8a3a'],
@@ -89,12 +90,16 @@ const views: Record<Tab, () => [string, string]> = {
       <div class="stat"><span>Token credit status</span><b>${G.pendingCredit ? '⏳ Pending…' : '✅ Active'}</b></div>`;
     if (G.meterUnits < 4) h += `<div class="warnbox">⚠️ Low credit! Light fit cut anytime you still dey use am. Buy units before wahala start.</div>`;
     if (!G.gridOn) h += `<div class="warnbox">Street light no dey — even if you buy 100 units now, dem no go work until NEPA return.</div>`;
+    h += `<div class="npBrand"><b>⚡ NextPawa</b><span>Units & data — instant token, receipt every time</span></div>`;
     h += [5, 10, 20].map((n, i) => `<button class="btn ${i === 0 ? 'primary ' : ''}small" data-buy="${n}">Buy ${n} units — ₦${fmt(n * UNIT_PRICE)}</button>`).join('');
+    h += `<label class="lbl">Mobile data · you get ${dataLabel()}</label>`;
+    if (G.dataMB < 150) h += `<div class="warnbox">📶 Data low! POS, deliveries, skits and online gigs need data. Top up here.</div>`;
+    h += `<div class="row">${DATA_BUNDLES.map((b, i) => `<button class="btn small" data-data="${i}" ${G.cash < b.p ? 'disabled' : ''}>${b.n}<div class="evSub">₦${fmt(b.p)}</div></button>`).join('')}</div>`;
     h += `<label class="lbl">Load promo token (once/day)</label>
         <input class="txt" id="tokIn" maxlength="14" placeholder="e.g. 5812-4470-9921">
         <button class="btn small" id="tokGo">Load token</button>
-        <p class="note">All prices fictional. Not connected to any real electricity payment.</p>`;
-    return ['⚡ Meter App', h];
+        <p class="note">In the game, everything here na game money — no real payment.${partnerLink('nextpawa', 'NextPawa') ? `<br>For your real meter and real data: ${partnerLink('nextpawa', 'NextPawa')} — separate &amp; optional.` : ''}</p>`;
+    return ['⚡ NextPawa', h];
   },
   power() {
     let h = `<div class="stat"><span>Grid (NEPA)</span><b style="color:${G.gridOn ? 'var(--green)' : 'var(--red)'}">${G.gridOn ? 'ON' : 'OFF'}</b></div>
@@ -111,7 +116,7 @@ const views: Record<Tab, () => [string, string]> = {
       ${atHome() ? '' : '<div class="warnbox">🏠 You no dey house — gen and appliances go wait till you reach.</div>'}
       <button class="btn primary small" id="pGen" ${atHome() ? '' : 'disabled'}>${G.genOn ? '⏹ Stop generator' : '▶ Start generator'}</button>
       <button class="btn small" id="pRepair">🔧 Service gen (₦1,500)</button>
-      <p class="note">Safety: generator stays outdoors, away from windows — always. The game no reward unsafe play.</p>`;
+      <p class="note">Safety: generator stays outdoors, away from windows — always. The game no reward unsafe play.<br><b>Gen fumes fit kill</b> — carbon monoxide no get colour or smell. Never run gen inside house, shop or garage.</p>`;
     return ['🔌 Power App', h];
   },
   street() {
@@ -170,6 +175,13 @@ const views: Record<Tab, () => [string, string]> = {
       const p = itemPrice(it.id), fee = deliveryFee(it.id);
       h += `<button class="btn small" data-shop="${it.id}">${it.n} — ₦${fmt(p + fee)}<div class="evSub">${it.d}${p !== it.p ? ' (discount!)' : ''}${fee ? ` · incl. ₦${fee} delivery` : ' · no delivery fee'}</div></button>`;
     });
+    // online deals: cheaper, riskier — Verispon escrow is the safe way to pay
+    h += `<label class="lbl">📲 Online deals today</label><div class="npBrand vs"><b>🛡️ Verispon escrow</b><span>Money wait safe till your item land. Seller no deliver? Full refund.</span></div>`;
+    todaysDeals().forEach((d, k) => {
+      const it = SHOP.find((s) => s.id === d.item)!, taken = dealTaken(d);
+      h += `<button class="btn small" data-deal="${k}" ${taken ? 'disabled' : ''}>${it.n} — ₦${fmt(d.price)} <span style="color:var(--green)">(-${Math.round((1 - d.price / itemPrice(d.item)) * 100)}%)</span><div class="evSub">${taken ? 'You don order this one' : `${d.seller} · ${d.blurb}`}</div></button>`;
+    });
+    if (G.orders.length) h += `<label class="lbl">On the way</label>` + G.orders.map((o) => `<div class="gistline">📦 ${SHOP.find((s) => s.id === o.item)!.n} from ${o.seller} — ${o.via === 'verispon' ? '🛡️ Verispon holding ₦' + fmt(o.price) : '📲 paid direct'} · due in ~${Math.max(1, Math.round((o.until - T()) / 60))}h</div>`).join('');
     return ['🛒 Shop', h];
   },
   hustle() {
@@ -180,7 +192,7 @@ const views: Record<Tab, () => [string, string]> = {
       const cd = Math.max(0, (G.hustleCd[x.id] || 0) - T());
       const wait = cd >= 60 ? Math.floor(cd / 60) + 'h ' + Math.round(cd % 60) + 'm' : Math.ceil(cd) + ' min';
       const where = `📍 ${place(x.place).n}${G.loc === x.place && !G.trip ? ' (you dey here)' : ` · ${tripMins(G.loc, x.place, 'walk')} min waka`}`;
-      h += `<button class="btn small" data-hustle="${x.id}" ${cd > 0 || busy() || travelling() ? 'disabled' : ''}>${x.n} — ₦${x.pay[0]}–${x.pay[1]}${x.need === 'any' ? ' ⚡needs light' : ''}${x.phone ? ' 📱' : ''}<div class="evSub">${cd > 0 ? 'Ready in ' + wait + ' (game time)' : x.d} • takes ~${x.mins / 60}h<br>${where}</div></button>`;
+      h += `<button class="btn small" data-hustle="${x.id}" ${cd > 0 || busy() || travelling() ? 'disabled' : ''}>${x.n} — ₦${x.pay[0]}–${x.pay[1]}${x.need === 'any' ? ' ⚡needs light' : ''}${x.phone ? ' 📱' : ''}${x.mb ? ` 📶${dataLabel(x.mb)}` : ''}<div class="evSub">${cd > 0 ? 'Ready in ' + wait + ' (game time)' : x.d} • takes ~${x.mins / 60}h<br>${where}</div></button>`;
     });
     return ['💼 Hustles', h];
   },
@@ -232,6 +244,8 @@ export function renderPhone(tab?: Tab): void {
     G.flags.tokDay = G.day; loadToken(3); toast('🎟️ Promo token accepted: +3 units!', 'sys');
   });
   b.querySelectorAll<HTMLElement>('[data-shop]').forEach((e) => { e.onclick = () => buyItem(e.dataset.shop!); });
+  b.querySelectorAll<HTMLElement>('[data-data]').forEach((e) => { e.onclick = () => { buyData(Number(e.dataset.data)); renderPhone(); }; });
+  b.querySelectorAll<HTMLElement>('[data-deal]').forEach((e) => { e.onclick = () => dealModal(todaysDeals()[Number(e.dataset.deal)]); });
   b.querySelectorAll<HTMLElement>('[data-hustle]').forEach((e) => { e.onclick = () => doHustle(HUSTLES.find((x) => x.id === e.dataset.hustle)!); });
   if (curTab === 'map') wireMap(b, () => renderPhone());
   b.querySelectorAll<HTMLElement>('[data-find]').forEach((e) => {

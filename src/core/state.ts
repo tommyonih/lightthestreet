@@ -4,7 +4,10 @@ import { HUSTLES, NPCDEF, PLACES, type PlaceId } from '../data/content';
 const SAVE_KEY = 'luts_save_v1';
 const SETTINGS_KEY = 'luts_settings';
 export const FIRST_MEETING_DAY = 3;
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
+
+/** Mobile data every new (or upgraded) player starts with, in MB. */
+export const STARTING_DATA = 800;
 
 /** Places on the map by a given day. */
 export const unlockedBy = (day: number): PlaceId[] => PLACES.filter((p) => p.unlockDay <= day).map((p) => p.id);
@@ -37,14 +40,14 @@ export function emptyWeek(n: number, day: number, cash: number, st: Stats): Week
 }
 
 export function freshState(): GameState {
-  const stats: Stats = { blackouts: 0, restores: 0, spent: 0, helped: 0, events: 0, complaints: 0, quietBlackouts: 0, votesWon: 0, challengesDone: 0, noMeterFailDays: 0, noiseThisBlackout: 0 };
+  const stats: Stats = { blackouts: 0, restores: 0, spent: 0, helped: 0, events: 0, complaints: 0, quietBlackouts: 0, votesWon: 0, challengesDone: 0, escrowDeals: 0, noMeterFailDays: 0, noiseThisBlackout: 0 };
   return {
     ver: SAVE_VERSION, name: 'Resident', gender: 0, skin: 2, hair: 0, outfit: 0, traits: [], bg: 'hustler',
     day: 1, minute: 7 * 60, weather: 'sunny', temp: 31,
     gridOn: true, nextFlip: 1440 + 7 * 60 + 18, flashUntil: 0, lastEvent: 0,
     meterUnits: 12, meterNo: '0452' + String(Math.floor(10000000 + Math.random() * 89999999)),
     cash: 3000, fuel: 3, gen: 1, genCond: 55, genOn: false,
-    phone: 68, lamp: 0, powerbank: 0, pbankCharges: 0, solar: 0, inverter: 0, invCharge: 50,
+    phone: 68, dataMB: STARTING_DATA, lamp: 0, powerbank: 0, pbankCharges: 0, solar: 0, inverter: 0, invCharge: 50,
     fridgeEff: 0, fanRecharge: 0, fanBat: 0,
     fanOn: true, tvOn: true, fridgeOn: true,
     happiness: 70, hunger: 25, fun: 55, noise: 0,
@@ -55,7 +58,7 @@ export function freshState(): GameState {
     obj: [], log: [], ach: [],
     npcs: NPCDEF.map((n) => ({ id: n.id, rel: 50, owing: false, paid: false, met: false, greetDay: 0, dashDay: 0, mem: [], favourDay: NEVER, grudgeDay: NEVER, coldUntil: 0 })),
     policies: {}, meetings: [], nextMeetingDay: FIRST_MEETING_DAY,
-    job: null, loc: 'street', trip: null, visited: ['street'], unlocked: unlockedBy(1), waypoint: null,
+    job: null, loc: 'street', trip: null, visited: ['street'], unlocked: unlockedBy(1), waypoint: null, orders: [],
     week: emptyWeek(1, 1, 3000, stats), weekHistory: [],
   };
 }
@@ -111,6 +114,7 @@ export function migrate(s: any): GameState {
     s.ver = 7;
   }
   if (s.ver < 8) { s.waypoint = null; s.ver = 8; }
+  if (s.ver < 9) { s.dataMB = STARTING_DATA; s.orders = []; s.stats.escrowDeals = 0; s.ver = 9; }
   s.genOn = false; // nobody leaves a gen running while they're away
   return s as GameState;
 }

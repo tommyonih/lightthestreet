@@ -16,6 +16,7 @@ import { jobTick } from './jobs';
 import { callMeeting, CURFEW_FINE, meetingDue, policiesNewDay, supplyMods } from './meetings';
 import { checkAch, checkObj } from './progress';
 import { atHome, place, suggest, worldTick } from './world';
+import { ordersTick } from './orders';
 
 /** Game minutes advanced per tick. One tick runs every 800ms, so a game hour is ~12s and a day ~4.8 min. */
 export const STEP = 4;
@@ -192,6 +193,7 @@ export function tick(): void {
   else if (G.intro >= 99 && chance(EVENT_CHANCE)) rollEvent();
   worldTick(); // before jobTick, so work starts the tick you arrive
   jobTick(STEP);
+  ordersTick();
   checkChallenges();
   checkAch();
   if (++tickCount % 15 === 0) save();

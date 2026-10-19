@@ -8,7 +8,7 @@ import { toast } from './toast';
 
 function fileName(card: CardKind): string {
   const who = G.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'resident';
-  return card.kind === 'week' ? `light-up-the-street-${who}-week-${card.week.n}.png` : `light-up-the-street-${who}-day-${G.day}.png`;
+  return card.kind === 'week' ? `light-up-your-street-${who}-week-${card.week.n}.png` : `light-up-your-street-${who}-day-${G.day}.png`;
 }
 
 function download(canvas: HTMLCanvasElement, name: string): void {
@@ -22,7 +22,7 @@ async function share(canvas: HTMLCanvasElement, name: string): Promise<void> {
   const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
   const file = blob && new File([blob], name, { type: 'image/png' });
   if (file && navigator.canShare?.({ files: [file] })) {
-    try { await navigator.share({ files: [file], text: 'My street don dey test me 😂 #LightUpTheStreet' }); return; }
+    try { await navigator.share({ files: [file], text: 'My street don dey test me 😂 Play free: https://lightupyourstreet.com #LightUpYourStreet' }); return; }
     catch { return; } // user closed the share sheet
   }
   download(canvas, name);

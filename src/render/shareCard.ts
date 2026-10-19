@@ -11,11 +11,11 @@ export const CARD_W = 1080, CARD_H = 1350;
 export type CardKind = { kind: 'session' } | { kind: 'week'; week: WeekState };
 
 export function statusLine(): string {
-  return G.streetlightFixed ? '💡 LIGHT UP THE STREET — MISSION COMPLETE!'
+  return G.streetlightFixed ? '💡 STREET DON LIGHT UP — MISSION COMPLETE!'
     : G.happiness >= 60 ? '⚡ LIGHT DON COME… FOR NOW.' : '😩 THE STREET DEY TEST YOU.';
 }
 
-/** The card's banner (the title already says "Light Up the Street"). */
+/** The card's banner (the title already says "Light Up Your Street"). */
 function bannerLine(): string {
   return G.streetlightFixed ? 'MISSION COMPLETE — THE STREET DON LIGHT!'
     : G.happiness >= 60 ? 'LIGHT DON COME… FOR NOW.' : 'THE STREET DEY TEST ME.';
@@ -54,7 +54,7 @@ export function renderShareCard(card: CardKind, canvas: HTMLCanvasElement = docu
 
   // title
   x.textAlign = 'center';
-  x.fillStyle = '#ffb347'; x.font = font(900, 76); x.fillText('LIGHT UP THE STREET', CARD_W / 2, 120);
+  x.fillStyle = '#ffb347'; x.font = font(900, 76); x.fillText('LIGHT UP YOUR STREET', CARD_W / 2, 120);
   x.fillStyle = '#b9b2a0'; x.font = font(600, 34);
   x.fillText(card.kind === 'week' ? `Week ${card.week.n} challenge card` : `My street report — Day ${G.day}`, CARD_W / 2, 172);
 
@@ -130,8 +130,11 @@ export function renderShareCard(card: CardKind, canvas: HTMLCanvasElement = docu
       for (let px = 30 + k * 30; px < CARD_W; px += 120) { x.beginPath(); x.arc(px, 1208 + Math.sin(px / CARD_W * Math.PI * 6) * 8, 7, 0, 7); x.fill(); }
     });
   }
-  x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(0, 1305, CARD_W, 45);
-  x.fillStyle = '#f5eeda'; x.font = font(600, 24);
-  x.fillText('All money & units are fictional • Free to play • #LightUpTheStreet', CARD_W / 2, 1336);
+  // the way back in: every shared card names the site, so a Status brings people to play
+  x.fillStyle = 'rgba(0,0,0,.7)'; x.fillRect(0, 1278, CARD_W, 72);
+  x.fillStyle = '#ffb347'; x.font = font(900, 34);
+  x.fillText('▶ Play free: lightupyourstreet.com', CARD_W / 2, 1316);
+  x.fillStyle = '#d8d0bc'; x.font = font(600, 20);
+  x.fillText('All money & units are fictional • 18+ • #LightUpYourStreet', CARD_W / 2, 1341);
   return canvas;
 }

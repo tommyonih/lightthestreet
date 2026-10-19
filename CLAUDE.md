@@ -35,6 +35,7 @@ A change is done only when `npm test` and `npm run build` both pass. Deploys go 
 | A street event | append to `EVENTS` in `src/game/events.ts` |
 | A meeting motion | append to `MOTIONS` in `src/game/meetings.ts`, with a stance for every neighbour |
 | A weekly challenge | append to `CHALLENGES` in `src/game/challenges.ts` |
+| Our products (NextPawa, Verispon, Tapmonie, Pressmonie) | names, taglines, real URLs and referral codes in `PARTNERS` (`src/data/content.ts`); real links only via `partnerLink()` in `game/economy.ts` (shows nothing until a URL is set). Online deals and escrow in `game/orders.ts`. Products are used with game money; real-world links stay labelled "separate & optional" |
 | A place on the map | `PLACES` + a route in `PATHS` (`src/data/content.ts`); things to do there go in `PLACE_ACTIONS` in `src/game/world.ts`; its 3D set is a builder in `BUILD` (`src/render3d/sets.ts`) plus a layout in `SETS` (`src/render3d/space.ts`, tested) |
 | Game rules or simulation | `src/game/` (one file per system; `sim.ts` owns `tick()`) |
 | Shared types / state / save / audio / haptics | `src/core/` |

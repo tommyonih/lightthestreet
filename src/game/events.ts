@@ -14,6 +14,7 @@ import { cooling, fun, hasTrait, mood, npcDef, npcState, powered, rel, trust } f
 import { checkAch } from './progress';
 import { doFavour, doGrudge, favourCandidate, grudgeCandidate, remember } from './memory';
 import { present } from './schedule';
+import { dealModal, dealTaken, todaysDeals } from './orders';
 import { blackoutFX } from './sim';
 
 export interface GameEvent {
@@ -195,6 +196,23 @@ export const EVENTS: GameEvent[] = [
           toast('🤝 "Bros!! You too much!" Emeka dey dance. (Whether e go pay back… na story for another day.)', 'sys'); checkAch();
         } },
         { t: '"Omo, my own sef dey cry"', fn: () => { rel('broke', -4); remember('broke', 'refused'); toast('🙏 Emeka nod slow-slow. "No wahala… no wahala." Guilt small, but survival first.', 'bad'); } },
+      ]);
+    } },
+  // Verispon: a too-good deal lands in your DMs
+  { id: 'dmseller', cd: 1100, w: 2, cond: () => G.day >= 2 && G.cash >= 1500,
+    run() {
+      const d = todaysDeals()[0];
+      if (dealTaken(d)) return;
+      dealModal(d, `📲 New DM from ${d.seller}`);
+    } },
+  // NextPawa: the roadside vendor's token wahala reaches your neighbour
+  { id: 'vendortoken', cd: 1300, w: 2, cond: () => G.day >= 2 && present('broke'),
+    run() {
+      openModal('🧾 Emeka & the Fake Token', 'Emeka dey shout: <i>"Vendor sell me token since morning — \'Invalid token\'! Him phone don switch off. My ₦2,000 don waka!"</i><br><br>Aunty Caro: <i>"Who still dey buy from roadside? Na NextPawa everybody dey use now — token land sharp, receipt dey."</i>', [
+        { t: '📲 Show Emeka how to buy on NextPawa', sub: 'Trust +2 · Emeka like you more', fn: () => {
+          trust(2); rel('broke', 6); fun(3); toast('📲 Emeka download am, buy 5 units, token land before e drop phone. "Bros, why nobody tell me since?!"', 'sys');
+        } },
+        { t: 'Laugh small and waka', fn: () => { fun(2); toast('😅 "Na so dem dey learn," you mutter. Emeka still dey find the vendor.', 'sys'); } },
       ]);
     } },
 ];

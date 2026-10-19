@@ -7,7 +7,7 @@ import { HUSTLES, type Hustle } from '../data/content';
 import { toast } from '../ui/toast';
 import { updHUD } from '../ui/hud';
 import { renderPhone } from '../ui/phone';
-import { addCash } from './economy';
+import { addCash, dataLabel } from './economy';
 import { fun } from './helpers';
 import { present } from './schedule';
 import { place, placePowered, setOff, tripMins } from './world';
@@ -37,6 +37,7 @@ export function doHustle(h: Hustle): void {
   }
   if (h.id === 'barb' && !present('barber')) { toast('💈 Skippo don lock shop. Come back when e dey around (9AM–8PM).', 'bad'); return; }
   if (h.phone && G.phone < 5) { toast(`📵 Your phone don die — no customer fit reach you for ${h.n}. Charge am first!`, 'bad'); sfx.bad(); return; }
+  if (h.mb && G.dataMB < h.mb / 2) { toast(`📶 Data don finish — ${h.n} need about ${dataLabel(h.mb)}. Buy data for the NextPawa app.`, 'bad'); sfx.bad(); return; }
   if (G.hunger > 90) { toast('🍲 Hunger don weak your body. Chop something before you hustle!', 'bad'); return; }
   G.hustleCd[h.id] = T() + h.cd;
   G.job = { id: h.id, worked: 0, paused: 0 };
@@ -57,6 +58,10 @@ export function jobTick(mins: number): void {
   }
   G.job.worked += mins;
   if (h.phone) G.phone = clamp(G.phone - 3 * mins / h.mins, 0, 100); // the job uses your phone
+  if (h.mb) {
+    const before = G.dataMB; G.dataMB = Math.max(0, G.dataMB - h.mb * mins / h.mins);
+    if (before >= 100 && G.dataMB < 100) toast(`📶 Data don remain ${dataLabel()}. Top up for NextPawa before e finish.`, 'bad');
+  }
   if (G.job.worked >= h.mins) finishJob(true);
 }
 

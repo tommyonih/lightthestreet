@@ -52,6 +52,8 @@ export function playDays(days: number) {
   for (let i = 0; i < days * TICKS_PER_DAY; i++) {
     tick();
     if (G.meterUnits < 3 && G.cash >= 5 * UNIT_PRICE + 800) { G.cash -= 5 * UNIT_PRICE; G.meterUnits += 5; }
+    // tops up data (NextPawa 1.5GB) too — but light first: only when units are still affordable afterwards
+    if (G.dataMB < 300 && G.cash >= 700 + 5 * UNIT_PRICE + 800) { G.cash -= 700; G.dataMB += 1500; }
     if (G.hunger > 70 && G.cash >= 300) eatAction();
     const h = HUSTLES.find((x) => (G.hustleCd[x.id] ?? -1) <= T() && (x.need !== 'any' || powered()) && (!x.phone || G.phone >= 5));
     if (h && G.hunger <= 90 && !busy()) doHustle(h);

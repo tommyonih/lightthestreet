@@ -3,7 +3,7 @@
    Signs and bulbs glow at night if the place has power: the area grid, or its own gen. */
 import * as THREE from 'three';
 import { seededRng } from '../core/util';
-import { OUTFITS, type PlaceId } from '../data/content';
+import { OUTFITS, PARTNERS, type PartnerId, type PlaceId } from '../data/content';
 import { glow, grainTex, pickable, signboard } from './kit';
 import { Person } from './people';
 import { SETS, Z, type Hit, type P } from './space';
@@ -104,6 +104,16 @@ function addBulb(s: PlaceSet, x: number, y: number, z: number, color = '#ffd27a'
   const gl = glow(color, size); gl.position.set(x, y, z + .1); s.group.add(gl); s.glows.push(gl);
 }
 
+/** A roadside billboard for one of our products: two legs, a lit board. Tapping NextPawa/Verispon opens their app. */
+function billboard(s: PlaceSet, id: PartnerId, x: number, z: number, w = 5, tab?: string): void {
+  const p = PARTNERS[id], leg = std('#3a3e45', { metalness: .4 }), h = w * .4;
+  for (const dx of [-w * .35, w * .35]) s.group.add(box(.14, 4.2, .14, leg, x + dx, 2.1, z - .06));
+  const board = addSign(s, p.name.toUpperCase(), w, h, p.color, '#ffffff', x, 4.2 + h / 2, z, p.tagline);
+  s.group.add(box(w + .2, h + .2, .1, std('#1d1d1d'), x, 4.2 + h / 2, z - .07));
+  if (tab) hit(s, board, { kind: 'app', tab });
+  addBulb(s, x, 4.2 + h + .15, z + .2, '#ffffff', 2);
+}
+
 /** A kerosene lantern on a stall: lit every night, NEPA or no NEPA. */
 function addLantern(s: PlaceSet, x: number, y: number, z: number): void {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, .22, 8), new THREE.MeshBasicMaterial({ color: '#ffb35c' }));
@@ -123,6 +133,7 @@ const BUILD: Record<Exclude<PlaceId, 'street'>, Build> = {
     [['#c0392b', -9.6], ['#2f6db5', -8.1], ['#3c8a4a', -6.6]].forEach(([c, x]) => { const o = okada(c as string); o.position.set(x as number, 0, 1.4); o.rotation.y = Math.PI / 2; rider.add(o); });
     g.add(rider);
     addLantern(s, -8.1, 1.2, 1.9); addLantern(s, 3.4, .95, 1.2);
+    billboard(s, 'nextpawa', 1, -6.5, 6.5, 'meter'); billboard(s, 'verispon', 18, -1.2, 4.5, 'shop');
     const k = keke(); k.position.set(9, 0, 3.4); g.add(k);
     const d = danfo(); d.position.set(14, 0, 7); g.add(d);
     umbrella(g, 4.6, .6, '#e63946', '#ffb347');
@@ -151,6 +162,7 @@ const BUILD: Record<Exclude<PlaceId, 'street'>, Build> = {
     const t = SETS.market.jobs.tailor;
     g.add(box(1.6, .1, .8, std('#8b5a2b'), t.x + .9, .8, t.z - .5), box(.5, .3, .25, std('#e8e8e8'), t.x + 1.2, 1, t.z - .5));
     addBulb(s, -15, 3, -.8); addBulb(s, 15, 3.4, -.8); addBulb(s, -2.4, 2.2, -.6, '#fff2c0', 3); addBulb(s, 7.5, 2.2, -.6, '#fff2c0', 3);
+    billboard(s, 'tapmonie', -5.5, -5, 4.4); billboard(s, 'pressmonie', 2.5, -5, 4.4); // both inside the default framing
   },
   fuel(g, s) {
     far(g, 'fuel-far');

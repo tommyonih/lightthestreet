@@ -260,6 +260,13 @@ input.txt:focus{outline:2px solid var(--amber);outline-offset:1px;}
 .stat b{font-weight:900;}
 .warnbox{background:#33270f;border:1px solid #7a6020;color:var(--amber);border-radius:12px;padding:10px 12px;font-size:13px;margin:8px 0;line-height:1.45;}
 .okbox{background:#132a19;border:1px solid #2a6a35;color:var(--green);border-radius:12px;padding:10px 12px;font-size:13px;margin:8px 0;line-height:1.45;}
+/* our products inside the phone apps: a brand strip, and real-world links that look like links, not game buttons */
+.npBrand{display:flex;flex-direction:column;gap:2px;margin:10px 0 4px;padding:9px 12px;border-radius:12px;
+  background:linear-gradient(135deg,rgba(242,162,27,.18),rgba(242,162,27,.06));border:1px solid rgba(242,162,27,.35);}
+.npBrand b{color:#f2a21b;font-size:14px;font-weight:900;} .npBrand span{font-size:12px;color:var(--dim);}
+.npBrand.vs{background:linear-gradient(135deg,rgba(47,158,90,.2),rgba(47,158,90,.06));border-color:rgba(47,158,90,.4);}
+.npBrand.vs b{color:var(--green);}
+.realLink{color:var(--blue);font-weight:800;text-decoration:underline;}
 .gistline{padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;line-height:1.45;}
 .gistline i{color:var(--dim);}
 

@@ -26,6 +26,7 @@ You've just moved onto a Lagos-style street. NEPA takes the light whenever it li
 | Share | 1080×1350 session/week card, copy summary | `render/shareCard.ts`, `ui/share.ts` |
 | App shell | PWA, offline, splash, install prompt, tab bar, bottom sheets, haptics, street feed | `ui/shell.ts`, `ui/phone.ts`, `public/` |
 | Places & travel | Neighbourhood map (street, junction, market, fuel station, campus, DisCo office, church), walk/okada trips, opening hours, unlocks, hustles at places, gen/appliances only at home, shop delivery fee | `game/world.ts`, `ui/map.ts` |
+| Our products | NextPawa is the in-game way to buy units and mobile data (instant, receipt) vs a cheaper roadside vendor whose tokens fail; phone hustles use data. Verispon escrow protects online deals from scammers (refund if not delivered). Tapmonie/Pressmonie billboards. Real links only when URLs are set in `PARTNERS` | `game/economy.ts`, `game/orders.ts`, `data/content.ts` |
 | Accounts (optional) | Supabase auth (email/password + Google), cloud save sync, session/week reports with share cards | `net/`, `ui/account.ts`, `supabase/` |
 
 ### Roadmap (Phase 2, in order)
@@ -61,7 +62,7 @@ The whole game is one JSON object saved to `localStorage`. Signed-in players als
 
 | Key | Contents |
 |---|---|
-| `luts_save_v1` | `GameState` (versioned by `ver`, currently `SAVE_VERSION = 8`) |
+| `luts_save_v1` | `GameState` (versioned by `ver`, currently `SAVE_VERSION = 9`) |
 | `luts_settings` | `Settings { sound, motion }`, kept separate so toggles never touch the save |
 
 `GameState` (full definition: `src/core/types.ts`), grouped:
@@ -74,7 +75,7 @@ The whole game is one JSON object saved to `localStorage`. Signed-in players als
 - **Money:** `cash, hustleCd{}, job: Job | null`
 - **Street:** `trust, fund, fundGoal, owing[], youPaid, streetlightFixed`
 - **Neighbours:** `npcs: NpcState[]` (`rel, owing, paid, met, greetDay, dashDay, mem[], favourDay, grudgeDay, coldUntil`)
-- **World:** `loc, trip, visited[], unlocked[]` (v7), `waypoint` (v8)
+- **World:** `loc, trip, visited[], unlocked[]` (v7), `waypoint` (v8), `dataMB, orders[]` (v9)
 - **Civics:** `policies: Policies, meetings: MeetingRecord[], nextMeetingDay`
 - **Weeks:** `week: WeekState, weekHistory[]`
 - **Progress:** `stats: Stats, obj: Objective[], ach[], log[], intro, introT, flags, evCd{}`

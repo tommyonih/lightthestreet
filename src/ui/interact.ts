@@ -117,7 +117,7 @@ export function housePanel(): void {
 
 export function genPanel(): void {
   const noFuel = !G.genOn && G.fuel <= 0, home = atHome();
-  openModal('🔌 ' + genLabel(), `Fuel: <b>${G.fuel.toFixed(1)}L</b> • Condition: <b>${Math.round(G.genCond)}%</b> • Status: ${G.genOn ? '<span style="color:var(--green)">RUNNING (outdoor ✓)</span>' : '<span style="color:var(--dim)">Off</span>'}<br><span style="font-size:12px;color:var(--dim)">Small gen carries fan+lights only. Big gen carries everything. Keep outdoors, away from windows!</span>`, [
+  openModal('🔌 ' + genLabel(), `Fuel: <b>${G.fuel.toFixed(1)}L</b> • Condition: <b>${Math.round(G.genCond)}%</b> • Status: ${G.genOn ? '<span style="color:var(--green)">RUNNING (outdoor ✓)</span>' : '<span style="color:var(--dim)">Off</span>'}<br><span style="font-size:12px;color:var(--dim)">Small gen carries fan+lights only. Big gen carries everything. Keep outdoors, away from windows!</span><br><span style="font-size:12px;color:var(--amber)">⚠️ Gen smoke fit kill: e get carbon monoxide — no colour, no smell. Never run gen inside house, shop or near door/window.</span>`, [
     { t: G.genOn ? '⏹ Stop generator' : '▶ Start generator', dis: noFuel || !home, sub: !home ? 'Your gen dey house — go home first' : noFuel ? 'Need fuel — buy from Shop' : G.genOn ? 'Quiet for the compound' : 'Uses fuel over time', fn: () => { if (G.genOn) stopGen(); else startGen(); } },
     { t: '🔧 Service gen — ₦1,500', dis: G.cash < 1500 || G.gen === 0, fn: repairGen },
     { t: 'Buy fuel (opens shop)', fn: () => openPhone('shop') },

@@ -2,9 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Light Up the Street — NEPA fit take light anytime</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Light Up Your Street — NEPA fit take light anytime</title>
 <meta name="description" content="A comedy survival sim about NEPA, prepaid meters, generators and neighbours.">
+<link rel="canonical" href="https://lightupyourstreet.com/">
+<meta property="og:title" content="Light Up Your Street">
+<meta property="og:description" content="NEPA fit take light anytime. Your street ready? A free comedy survival sim — all money is fictional.">
+<meta property="og:url" content="https://lightupyourstreet.com/">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://lightupyourstreet.com/icons/icon-512.png">
 <meta name="theme-color" content="#141824">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,7 +29,7 @@
   <!-- SPLASH -->
   <div id="splash" aria-hidden="true">
     <img class="logo" src="./favicon.svg" alt="" width="96" height="96">
-    <div class="splashName">Light Up the Street</div>
+    <div class="splashName">Light Up Your Street</div>
     <div class="splashBar"><i></i></div>
   </div>
 
@@ -31,7 +37,7 @@
   <div class="screen active" id="scr-welcome">
     <div class="hero">
       <img class="logo" src="./favicon.svg" alt="" width="104" height="104">
-      <h1>Light Up the Street</h1>
+      <h1>Light Up Your Street</h1>
       <p class="tagline">“NEPA fit take light anytime. Your street ready?”</p>
     </div>
     <div class="card">
@@ -73,11 +79,13 @@
         • All prices, naira, meter units and tokens are <b>simulated &amp; virtual</b>.<br>
         • No in-game currency can be cashed out — ever.<br>
         • The game does <b>not</b> collect or process real electricity payments.<br>
-        • Real-world recharge (e.g. NextPawa) is separate &amp; optional — not needed to win.<br>
+        • NextPawa (units &amp; data) and Verispon (escrow) appear in the game with game money. Using the real NextPawa or Verispon is separate &amp; optional — never needed to win.<br>
         • Use a nickname anywhere public.<br>
         • Never do dangerous electrical repairs or run generators indoors/unsafe — in-game or real life.<br>
         • Generators must stay outdoors, away from windows. The game enforces this.<br>
+        • <b>Generator fumes can kill.</b> They contain carbon monoxide, which you can't see or smell. Never run a generator inside a house, shop, kitchen or garage, or near doors and windows.<br>
       </div>
+      <p class="note" id="operator">Light Up Your Street is operated by <b>Netsible Solutions NG Limited</b>.</p>
       <button class="btn primary" id="btnRulesBack" style="margin-top:12px">I understand</button>
     </div>
   </div>
@@ -167,7 +175,7 @@
 
     <nav id="tabbar">
       <button class="tbi sel" data-nav="home" id="tabHome"><i data-icon="home"></i><span>Street</span></button>
-      <button class="tbi" data-nav="meter" id="btnPhoneHud"><i data-icon="gauge"></i><span>Meter</span></button>
+      <button class="tbi" data-nav="meter" id="btnPhoneHud"><i data-icon="zap"></i><span>NextPawa</span></button>
       <button class="tbi" data-nav="street"><i data-icon="users"></i><span>People</span></button>
       <button class="tbi" data-nav="map"><i data-icon="map"></i><span>Map</span></button>
       <button class="tbi" data-nav="apps"><i data-icon="grid"></i><span>Apps</span></button>

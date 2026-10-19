@@ -49,7 +49,37 @@ export interface Hustle {
   verb: string;
   /** Where the work happens; starting the hustle walks you there. */
   place: PlaceId;
+  /** Mobile data the job uses (MB), for hustles that run on your phone. */
+  mb?: number;
 }
+
+/* ---------- Netsible products in the game ----------
+   NextPawa (units + data) and Verispon (escrow) are part of play: you meet the problem in the game and the product
+   solves it — with game money, like everything else. `url`/`ref` are the REAL sites, shown only as clearly separate,
+   optional links; leave `url` empty and no link appears. Tapmonie and Pressmonie are ad slots until their stories land. */
+export interface Partner {
+  name: string; tagline: string;
+  /** Real-world site. Empty = no link shown anywhere. */
+  url: string;
+  /** Referral code appended to real links as ?ref= (empty = none). */
+  ref: string;
+  color: string;
+}
+export type PartnerId = 'nextpawa' | 'verispon' | 'tapmonie' | 'pressmonie';
+export const PARTNERS: Record<PartnerId, Partner> = {
+  nextpawa: { name: 'NextPawa', tagline: 'Electricity units & data — instant, with receipt', url: '', ref: '', color: '#f2a21b' },
+  verispon: { name: 'Verispon', tagline: 'Escrow: pay safe, release when e land', url: '', ref: '', color: '#2f9e5a' },
+  tapmonie: { name: 'Tapmonie', tagline: 'Coming to your street soon', url: '', ref: '', color: '#5a6cf0' },
+  pressmonie: { name: 'Pressmonie', tagline: 'Coming to your street soon', url: '', ref: '', color: '#d04a7a' },
+};
+
+/** Mobile data bundles in the NextPawa app (game money). */
+export const DATA_BUNDLES: { mb: number; p: number; n: string }[] = [
+  { mb: 500, p: 300, n: '500MB' }, { mb: 1500, p: 700, n: '1.5GB' }, { mb: 4000, p: 1500, n: '4GB' },
+];
+
+/** Online sellers in the Shop's deals: some are legit, some are not. Honesty is decided per deal. */
+export const SELLERS = ['@BigDealsNG', '@GenPlug_Lagos', '@SolarKing_Ikeja', '@ChargeAm_Fast', '@MamaGadget', '@NoShakingStores'];
 
 export type PlaceId = 'street' | 'junction' | 'market' | 'fuel' | 'disco' | 'campus' | 'church';
 export interface Place {
@@ -212,12 +242,12 @@ export const MEMORY: Record<MemKind, MemoryDef> = {
 };
 
 export const HUSTLES: Hustle[] = [
-  { id: 'pos', n: 'POS / Transfer stand', pay: [350, 900], cd: 240, need: null, phone: true, d: 'Collect small change for people. Phone must get battery.', mins: 120, verb: '🏧 Running POS', place: 'junction' },
-  { id: 'deliver', n: 'Delivery runs', pay: [300, 700], cd: 180, need: null, phone: true, d: 'Bike errands around the junction. Customers call your phone.', mins: 90, verb: '🛵 Out on delivery', place: 'junction' },
+  { id: 'pos', n: 'POS / Transfer stand', pay: [350, 900], cd: 240, need: null, phone: true, d: 'Collect small change for people. Phone must get battery and data.', mins: 120, verb: '🏧 Running POS', place: 'junction', mb: 40 },
+  { id: 'deliver', n: 'Delivery runs', pay: [300, 700], cd: 180, need: null, phone: true, d: 'Bike errands around the junction. Customers call and WhatsApp you.', mins: 90, verb: '🛵 Out on delivery', place: 'junction', mb: 30 },
   { id: 'barb', n: 'Barbing (borrow Skippo’s shop)', pay: [600, 1400], cd: 360, need: 'any', d: 'Needs light — grid or generator.', mins: 120, verb: '💈 Barbing', place: 'street' },
   { id: 'tailor', n: 'Sewing & adjustments', pay: [500, 1100], cd: 300, need: 'any', d: 'Market stall. The machine needs NEPA light — your gen no reach market.', mins: 150, verb: '🧵 Sewing', place: 'market' },
-  { id: 'content', n: 'Content creation', pay: [800, 2000], cd: 480, need: 'any', phone: true, d: 'Shoot skits. Light = camera = action.', mins: 180, verb: '🎬 Shooting skit', place: 'street' },
-  { id: 'remote', n: 'Freelance gig online', pay: [1000, 2500], cd: 600, need: 'any', phone: true, d: 'Cyber café get gen. Laptop + hotspot = dollars, sorry, naira.', mins: 240, verb: '💻 Freelance gig', place: 'campus' },
+  { id: 'content', n: 'Content creation', pay: [800, 2000], cd: 480, need: 'any', phone: true, d: 'Shoot skits and upload. Light = camera = action, data = upload.', mins: 180, verb: '🎬 Shooting skit', place: 'street', mb: 350 },
+  { id: 'remote', n: 'Freelance gig online', pay: [1000, 2500], cd: 600, need: 'any', phone: true, d: 'Cyber café get gen. Laptop + hotspot = dollars, sorry, naira.', mins: 240, verb: '💻 Freelance gig', place: 'campus', mb: 450 },
 ];
 
 export const SHOP: ShopItem[] = [
@@ -241,6 +271,7 @@ export const ACH: Achievement[] = [
   { id: 'democracy', n: '🏛️ Democracy Dey', d: 'Be on the winning side of 3 street votes.', ck: (G) => G.stats.votesWon >= 3 },
   { id: 'champion', n: '🏆 Weekly Champion', d: 'Complete all 3 challenges in one week.', ck: (G) => G.weekHistory.some((w) => w.total > 0 && w.done === w.total) },
   { id: 'elected', n: '🗳️ People’s Choice', d: 'Get elected street chairman.', ck: (G) => !!G.policies.youChair },
+  { id: 'escrow', n: '🛡️ No Scam Zone', d: 'Finish 3 online deals safely with Verispon.', ck: (G) => G.stats.escrowDeals >= 3 },
 ];
 
 export const NEWS = [
@@ -250,4 +281,6 @@ export const NEWS = [
   'NEPA officials promise "improved supply". Street residents laugh small.',
   'Traffic report: Go-slow hold Third Mainland since morning. Shine your eye.',
   'Tech gist: New inverter enter market — "silence wey dey powerful".',
+  'Street survey: Residents wey buy units for NextPawa say "token land before I drop phone". Roadside vendor no comment.',
+  'Scam alert: "Half-price inverter" sellers dey everywhere online. Smart people dey pay with Verispon escrow.',
 ];
