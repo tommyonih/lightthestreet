@@ -1,11 +1,12 @@
 import { G, SET, hasGame } from '../core/state';
-import { $, esc, fmt } from '../core/util';
+import { $, esc } from '../core/util';
 import { NEWS } from '../data/content';
 import { hourNow } from '../game/helpers';
 import { jobProgress, jobStalled } from '../game/jobs';
 import { atHome } from '../game/world';
 import { icon } from './icons';
 import { placeChip, updGuide, updPlaceCard } from './map';
+import { flyCoins, rollCash, updAmbience } from './juice';
 import { feed, isHeadless } from './toast';
 
 const WEATHER_ICON = { sunny: '☀️', hot: '🔥', rain: '🌧️', storm: '⛈️' } as const;
@@ -34,11 +35,13 @@ export function updHUD(): void {
   $('#hudAva').textContent = (G.name.trim()[0] || '?').toUpperCase();
 
   const cash = $('#pillCash');
-  cash.textContent = '₦' + fmt(G.cash);
+  rollCash(cash, Math.round(G.cash));
   if (!Number.isNaN(lastCash) && Math.round(lastCash) !== Math.round(G.cash)) {
     cash.classList.add('bump'); setTimeout(() => cash.classList.remove('bump'), 220);
+    flyCoins(G.cash - lastCash); // only gains, and only meaningful ones
   }
   lastCash = G.cash;
+  updAmbience();
 
   tile('pillGrid', 'zap', 'NEPA', G.gridOn ? 'ON' : 'OFF', null, G.gridOn ? 'on' : 'off');
   const mu = G.meterUnits;

@@ -50,8 +50,12 @@ const GIST: Record<string, string> = {
   barber: '"My clipper, my fan, my TV — all of dem dey cry for light. Barber wey no get light na hairdresser."',
 };
 
+let talking: string | null = null;
+/** Whose panel is open right now (the 3D view turns them to face you and moves their mouth). */
+export const talkingTo = (): string | null => (modalOpen ? talking : null);
+
 export function npcClick(id: string): void {
-  const d = npcDef(id), st = npcState(id); st.met = true; checkObj('greet');
+  const d = npcDef(id), st = npcState(id); st.met = true; checkObj('greet'); talking = id;
   const memory = chance(.6) ? recallLine(id) : null;
   const line = memory ?? (!G.gridOn ? pick(d.off) : (G.meterUnits < 4 ? pick(['Your meter dey cry o. I hear am beep.', 'Buy units before NEPA shame you!']) : pick(chance(.4) ? d.on : d.greet)));
   const greeted = st.greetDay === G.day;

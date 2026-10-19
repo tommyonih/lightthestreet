@@ -29,7 +29,8 @@ Project plan and roadmap: [docs/PLAN.md](docs/PLAN.md). Design rules: [docs/DESI
 | `src/game/meetings.ts` | Street meetings and voting. Add a motion by appending to `MOTIONS` (give each neighbour a stance) |
 | `src/game/` | Economy, generator, street fund, intro, eat/sleep actions |
 | `src/render/` | Canvas street scene and character preview (the 2D Classic view) |
-| `src/render3d/` | The 3D street (three.js, one lazy chunk): `scene.ts` loop/camera/lighting/picking, `world3d.ts` geometry, `people.ts` figures, `kit.ts` code-drawn textures, `space.ts` pure layout maths shared with tests |
+| `src/render3d/` | The 3D view (three.js, one lazy chunk): `scene.ts` loop/camera/lighting/picking/which place is shown, `world3d.ts` your street, `sets.ts` the other places, `people.ts` the character rig (poses, face decal), `mood.ts` pure rules for faces and poses (tested), `portrait.ts` creator turntable and share-card portrait, `kit.ts` code-drawn textures, faces and signboards, `space.ts` pure layout maths (street + `SETS`) shared with tests |
+| `src/ui/juice.ts` | HUD touches: rolling cash, ₦ coins flying to it, and which ambience beds play (`setAmbience` in `core/audio.ts`) |
 | `src/ui/view.ts` | Picks 2D or 3D (`SET.view`), lazy-loads the 3D chunk, falls back to 2D if WebGL is missing or frames are slow |
 | `src/ui/` | Modal, toast, HUD + street feed, phone apps (bottom sheet + tab bar), street clicks, screens, creator, results |
 | `src/ui/map.ts` | Map app (SVG from `PLACES`/`PATHS`) and the place card that covers the street while you're out |

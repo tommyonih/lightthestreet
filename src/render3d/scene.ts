@@ -12,8 +12,10 @@ import { lampLevel } from '../render/lights';
 import { mix, rgba } from '../render/paint';
 import { timeLook } from '../render/sky';
 import { fmt } from '../core/util';
+import { GRUDGE, opinion } from '../game/memory';
+import { CHEER_S, SHOCK_S, npcLook, playerFace, type Pose } from './mood';
 import { Person } from './people';
-import { Tag, groundDisc } from './kit';
+import { Tag, glowTex, groundDisc } from './kit';
 import { buildSet, okada, type PlaceSet } from './sets';
 import { buildStreet } from './world3d';
 import { EDGE, EDGE_R, GEN_SPOT, HOME_SPOT, SETS, STALL, Z, arriving, clampIn, followX, npcSpot, stepToward, type Hit } from './space';
@@ -23,6 +25,8 @@ export interface Hooks {
   onHit(h: Hit): void;
   /** Frames are too slow on this device: the UI should fall back to 2D. */
   onSlow(): void;
+  /** The neighbour whose panel is open, if any: they face you and talk. */
+  talkingTo?: () => string | null;
 }
 export interface View3D { stop(): void }
 
@@ -100,6 +104,24 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
     return me;
   }
 
+  /* ---------- rain puddles: they fill as the ground gets wet, show the sky, and at night a smear of warm light ----------
+     (no environment map on phones, so the "reflection" is faked: sky colour plus an additive streak towards the camera) */
+  const puddleMat = new THREE.MeshBasicMaterial({ color: '#8aa0c0', transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 });
+  const shineMat = new THREE.MeshBasicMaterial({ map: glowTex(), color: '#ffc46b', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  for (const [x, z, r] of [[-9, 2.8, 1.4], [-2.5, 3.7, 1], [4, 2.4, 1.6], [11, 3.4, 1.1], [-6, 7, 1.8], [7, 6.4, 1.5], [15, 8, 1.2]]) {
+    const p = new THREE.Mesh(new THREE.CircleGeometry(r, 20), puddleMat);
+    p.rotation.x = -Math.PI / 2; p.scale.y = .55; p.position.set(x, .03, z); scene.add(p);
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(r * .7, r * 1.6), shineMat);
+    s.rotation.x = -Math.PI / 2; s.position.set(x, .035, z); scene.add(s);
+  }
+
+  /* ---------- tap feedback: a ring that pulses where you tapped ---------- */
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.42, .58, 32),
+    new THREE.MeshBasicMaterial({ color: '#ffb347', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = .05; scene.add(ring);
+  let ringAt = -9;
+  const pulse = (x: number, z: number) => { ring.position.x = x; ring.position.z = z; ringAt = performance.now() / 1000; };
+
   /* ---------- waypoint beacon and the dashed path to it ---------- */
   const beacon = new THREE.Group(); beacon.visible = false; scene.add(beacon);
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, 7, 16, 1, true),
@@ -129,13 +151,15 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
 
   /* ---------- camera ---------- */
   let zoom = .2, camX = HOME_SPOT.x;
-  function placeCamera(dt: number, focusX: number): void {
+  /** `kick`: how hard to shake this frame (lightning, NEPA cutting); `push`: a short dolly-in for big moments. */
+  function placeCamera(dt: number, focusX: number, kick = 0, push = 0): void {
     const target = followX(focusX);
     camX = SET.motion ? camX + (target - camX) * Math.min(1, dt * 2.5) : target;
     // zoomed out shows roofs, sky and about three houses; zoomed in is a porch-level view
-    const dist = 21 - zoom * 9, height = 6.4 - zoom * 2.4;
-    camera.position.set(camX, height, Z.outside + dist);
-    camera.lookAt(camX, 2.9 - zoom * .9, Z.porch);
+    const z = Math.min(1, zoom + (SET.motion ? push : 0)), dist = 21 - z * 9, height = 6.4 - z * 2.4;
+    const sx = SET.motion ? (Math.random() - .5) * kick : 0, sy = SET.motion ? (Math.random() - .5) * kick : 0;
+    camera.position.set(camX + sx, height + sy, Z.outside + dist);
+    camera.lookAt(camX + sx * .5, 2.9 - z * .9, Z.porch);
   }
 
   /* ---------- input: tap to pick or walk, pinch / wheel to zoom ---------- */
@@ -168,15 +192,35 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
     const r = canvas.getBoundingClientRect();
     ndc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const targets = [...(cur === 'street' ? W.pickables : setOf(cur)?.pickables ?? []), ...npcs.filter((n) => n.p.root.visible).map((n) => n.p.root)];
-    for (const h of ray.intersectObjects(targets, true)) {
-      if (!shownChain(h.object)) continue;
-      for (let o: THREE.Object3D | null = h.object; o; o = o.parent) if (o.userData.hit) { hooks.onHit(o.userData.hit as Hit); return; }
+    const found = pickAt();
+    if (found) {
+      const npc = (found.hit as Hit).kind === 'npc';
+      pulse(npc ? found.obj.position.x : found.point.x, npc ? found.obj.position.z : Math.max(found.point.z, Z.porch));
+      hooks.onHit(found.hit as Hit); return;
     }
     if (G.job) return; // you're at work: no wandering off
     const g = ray.intersectObject(W.walkPlane)[0]; // the walk plane is world-wide, so it serves every set
-    if (g) tapTo = clampIn(cur, g.point.x, g.point.z);
+    if (g) { tapTo = clampIn(cur, g.point.x, g.point.z); pulse(tapTo.x, tapTo.z); }
   }
+  /** The tappable thing under the ray (set from the last pointer position), if any. */
+  function pickAt(): { hit: unknown; obj: THREE.Object3D; point: THREE.Vector3 } | null {
+    const targets = [...(cur === 'street' ? W.pickables : setOf(cur)?.pickables ?? []), ...npcs.filter((n) => n.p.root.visible).map((n) => n.p.root)];
+    for (const h of ray.intersectObjects(targets, true)) {
+      if (!shownChain(h.object)) continue;
+      for (let o: THREE.Object3D | null = h.object; o; o = o.parent) if (o.userData.hit) return { hit: o.userData.hit, obj: o, point: h.point };
+    }
+    return null;
+  }
+  // desktop: a hand cursor over anything you can tap
+  let hoverAt = 0;
+  const onHover = (e: PointerEvent) => {
+    if (e.pointerType !== 'mouse' || touches.size || performance.now() - hoverAt < 90) return;
+    hoverAt = performance.now();
+    const r = canvas.getBoundingClientRect();
+    ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera);
+    canvas.style.cursor = !G.trip && pickAt() ? 'pointer' : 'default';
+  };
+  canvas.addEventListener('pointermove', onHover);
 
   /* ---------- size ---------- */
   function resize(): void {
@@ -187,6 +231,7 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
 
   /* ---------- the frame ---------- */
   let raf = 0, last = 0, frames = 0, slowSum = 0, reportedSlow = false;
+  let lastGrid: boolean | null = null, offAt = -99, onAt = -99;
   const gameOn = () => hasGame() && !!document.querySelector('#scr-game.active') && !document.hidden && canvas.offsetParent !== null;
 
   function frame(): void {
@@ -216,8 +261,8 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
     const a = (h - 6) / 12.5 * Math.PI;
     sun.position.set(camX + Math.cos(a) * -22, Math.max(2, Math.sin(a) * 26), 14); sun.target.position.set(camX, 0, 0);
     sun.intensity = day * (1.9 - L.cloud * 1.1); sun.color.set(rgba(mix(L.grade, [255, 244, 224], .55)));
-    hemi.color.set(rgba(mix(L.top, [255, 255, 255], .35))); hemi.intensity = .18 + day * .95 + flash * 2.5;
-    moon.intensity = (1 - day) * .35;
+    hemi.color.set(rgba(mix(L.top, [255, 255, 255], .35))); hemi.intensity = .26 + day * .9 + flash * 2.5;
+    moon.intensity = (1 - day) * .6; // enough moonlight to make out people in a blackout, not enough to feel lit
 
     // houses: grid (or their own gen) for neighbours, your own supply for you
     const night = .2 + L.dark * 1.1;
@@ -245,6 +290,11 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
     const raining = G.weather === 'rain' || G.weather === 'storm';
     wet = Math.max(0, Math.min(1, wet + dt * (raining ? 1 / 12 : -1 / 40)));
     W.road.roughness = .75 - wet * .45; W.ground.roughness = .9 - wet * .3;
+    puddleMat.opacity = wet * .45; puddleMat.color.set(rgba(mix(L.bot, L.top, .3)));
+    shineMat.opacity = wet * Math.min(1, L.dark * 1.4) * .85; // the bulbs, mirrored
+    const ringAge = t - ringAt; // tap ring: grows and fades in half a second
+    (ring.material as THREE.MeshBasicMaterial).opacity = ringAge < .5 ? (1 - ringAge / .5) * .9 : 0;
+    ring.scale.setScalar(1 + Math.min(ringAge, .5) * 1.6);
     W.ground.color.set(rgba(mix([255, 255, 255], [170, 150, 140], wet)));
     rain.visible = raining && SET.motion;
     if (rain.visible) {
@@ -274,7 +324,16 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
       if (s.life <= 0 || cur !== 'street') { s.s.visible = false; s.life = Math.min(s.life, 0); continue; }
       s.life -= dt * .45; s.s.position.x += s.vx * dt; s.s.position.y += s.vy * dt;
       s.s.scale.setScalar(.3 + (1 - s.life) * 1.1); s.s.material.opacity = Math.max(0, s.life) * .35;
+      s.s.material.color.set(rgba(mix([138, 138, 144], [255, 154, 64], L.dark * .45 * s.life))); // fresh smoke catches the gen's glow at night
     }
+
+    // NEPA moments everyone reacts to: a gasp when it goes, a cheer when it comes back
+    if (G.gridOn !== lastGrid) { if (lastGrid != null) { if (G.gridOn) onAt = t; else offAt = t; } lastGrid = G.gridOn; }
+    const sinceOff = t - offAt, sinceOn = t - onAt;
+    const hot = !G.gridOn && G.temp >= 31 && h >= 11 && h < 23;
+    const talking = hooks.talkingTo?.() ?? null;
+    const moodOf = (rel: number, grudge: boolean, seated: boolean, seed: number, talk = false, heat = hot) =>
+      npcLook({ rel, grudge, seated, hot: heat, sinceOff, sinceOn, hour: h, talking: talk, seed, t });
 
     // the place on screen follows you; signs and bulbs at other places run on the grid or their own gen
     const vp = viewPlace(); if (vp !== cur) showSet(vp);
@@ -284,12 +343,14 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
       for (const m of set.signs) m.emissiveIntensity = lv * (.08 + L.dark * 1.1);
       for (const b of set.bulbs) b.color.set(rgba(mix([93, 93, 93], [255, 246, 208], on)));
       for (const g of set.glows) g.material.opacity = lv * night * .7;
+      for (const g of set.lanterns) g.material.opacity = Math.max(0, L.dark - .15) * (.8 + (SET.motion ? Math.sin(t * 9 + g.position.x) * .08 : 0)); // flames flicker
       set.light.intensity = lv * 9 * L.dark;
       const open = isOpen(cur);
       set.crowd.forEach((c, i) => { // shoppers and passers-by: some stand, some stroll
         c.p.shown = open; if (!open) { c.p.place(); return; }
         const x = c.home.x + (c.roam && SET.motion ? Math.sin(t * .35 + i * 2) * c.roam : 0), moving = c.roam > 0 && SET.motion;
-        c.p.face(c.roam ? Math.cos(t * .35 + i * 2) : 0, c.roam ? 0 : 1); c.p.pos.x = x; c.p.animate(dt, moving, SET.motion); c.p.place();
+        const look = moodOf(55, false, false, i, false, false); // strangers: no grudges, and their place has its own shade
+        c.p.face(c.roam ? Math.cos(t * .35 + i * 2) : 0, c.roam ? 0 : 1); c.p.pos.x = x; c.p.animate(dt, moving, SET.motion, moving ? 'idle' : look.pose, look.face); c.p.place();
       });
     }
 
@@ -310,8 +371,10 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
       n.lastAt = w.at;
       const ox = p.pos.x, oz = p.pos.z, arrived = stepToward(p.pos, to, NPC_SPEED * dt);
       if (arrived && !to.show) p.shown = false;
-      p.face(p.pos.x - ox, p.pos.z - oz); p.animate(dt, !arrived, SET.motion); p.place();
-      const st = G.npcs.find((x) => x.id === n.def.id)!, rel = Math.round(st.rel);
+      const st = G.npcs.find((x) => x.id === n.def.id)!, rel = Math.round(st.rel), talk = talking === n.def.id;
+      const look = moodOf(rel, opinion(n.def.id) <= GRUDGE, cur === 'street' && w.at === 'outside', npcs.indexOf(n), talk);
+      if (talk && me) p.lookAt(me.pos.x, me.pos.z); else p.face(p.pos.x - ox, p.pos.z - oz);
+      p.animate(dt, !arrived, SET.motion, arrived ? look.pose : 'idle', look.face); p.place();
       p.tag.set(n.def.name, rel >= 65 ? '#7ee787' : rel >= 40 ? '#ffd97a' : '#ff9d9d', '♥' + rel);
     }
 
@@ -331,7 +394,11 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
     if (arrived && leave) m.shown = false;
     const moving = !!G.trip ? tripProgress() < 1 : !arrived;
     const working = !!workAt && arrived && !jobStalled();
-    m.face(m.pos.x - ox, m.pos.z - oz); m.animate(dt, moving && !riding, SET.motion, working ? (job!.id === 'content' ? 'cheer' : 'work') : 'idle'); m.place();
+    const myPose: Pose = working ? (job!.id === 'content' ? 'cheer' : 'work') : moving || riding ? 'idle' : sinceOff < SHOCK_S ? 'shock' : sinceOn < CHEER_S ? 'cheer' : 'idle';
+    const myFace = playerFace(G.happiness, G.hunger, sinceOff, sinceOn, h);
+    const partner = talking ? npcs.find((n) => n.def.id === talking && n.p.shown) : undefined;
+    if (partner && !moving) m.lookAt(partner.p.pos.x, partner.p.pos.z); else m.face(m.pos.x - ox, m.pos.z - oz);
+    m.animate(dt, moving && !riding, SET.motion, myPose, myFace); m.place();
     bike.visible = riding && m.shown;
     if (bike.visible) { bike.position.set(m.pos.x, 0, m.pos.z); bike.rotation.y = Math.atan2(-(m.pos.z - oz), m.pos.x - ox || 1e-6); m.root.position.y = .45; }
     if (working || (job && workAt && jobStalled())) m.tag.set(jobStalled() ? '⏳ Waiting for light…' : job!.verb, '#f5eeda', '', jobProgress());
@@ -369,7 +436,9 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
 
     const focus = m.shown ? m.pos.x : rest.x;
     if (snap) camX = followX(focus); // a new place: cut, don't pan in from the last one
-    placeCamera(dt, focus);
+    // lightning jolts the camera; NEPA cutting gives a thump and a short push in on the dark
+    const kick = flash * .35 + Math.max(0, .5 - sinceOff) * .5, push = sinceOff < 2.5 ? (1 - sinceOff / 2.5) * .25 : 0;
+    placeCamera(dt, focus, kick, push);
     snap = false;
     renderer.render(scene, camera);
   }
@@ -380,7 +449,7 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
       cancelAnimationFrame(raf); ro?.disconnect();
       canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp);
-      canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('wheel', onWheel); canvas.removeEventListener('pointermove', onHover);
       renderer.dispose();
     },
   };

@@ -35,7 +35,7 @@ A change is done only when `npm test` and `npm run build` both pass. Deploys go 
 | A street event | append to `EVENTS` in `src/game/events.ts` |
 | A meeting motion | append to `MOTIONS` in `src/game/meetings.ts`, with a stance for every neighbour |
 | A weekly challenge | append to `CHALLENGES` in `src/game/challenges.ts` |
-| A place on the map | `PLACES` + a route in `PATHS` (`src/data/content.ts`); things to do there go in `PLACE_ACTIONS` in `src/game/world.ts` |
+| A place on the map | `PLACES` + a route in `PATHS` (`src/data/content.ts`); things to do there go in `PLACE_ACTIONS` in `src/game/world.ts`; its 3D set is a builder in `BUILD` (`src/render3d/sets.ts`) plus a layout in `SETS` (`src/render3d/space.ts`, tested) |
 | Game rules or simulation | `src/game/` (one file per system; `sim.ts` owns `tick()`) |
 | Shared types / state / save / audio / haptics | `src/core/` |
 | Anything drawn on a canvas | `src/render/` (2D) and, for the 3D street, `src/render3d/` (layout maths without three.js go in `space.ts` so tests can cover them) |

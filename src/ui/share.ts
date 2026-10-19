@@ -30,8 +30,19 @@ async function share(canvas: HTMLCanvasElement, name: string): Promise<void> {
 
 export const canNativeShare = (): boolean => typeof navigator.share === 'function';
 
-export function openShareSheet(card: CardKind): void {
-  const canvas = renderShareCard(card), name = fileName(card);
+/** In 3D mode the card carries a 3D portrait of you; otherwise (or if 3D can't load) the 2D drawing. */
+async function portrait(): Promise<HTMLCanvasElement | undefined> {
+  if (!document.body.classList.contains('v3d')) return undefined;
+  try {
+    const m = await import('../render3d/portrait');
+    return m.snapshot({ skin: G.skin, hair: G.hair, outfit: G.outfit, gender: G.gender }, 560, 760, G.happiness >= 50 ? 'happy' : 'neutral');
+  } catch { return undefined; }
+}
+
+export function openShareSheet(card: CardKind): void { void portrait().then((pic) => showSheet(card, pic)); }
+
+function showSheet(card: CardKind, pic?: HTMLCanvasElement): void {
+  const canvas = renderShareCard(card, undefined, pic), name = fileName(card);
   const preview = `<img src="${canvas.toDataURL('image/png')}" alt="Your share card" style="width:100%;border-radius:12px;border:1px solid var(--line)">`;
   openModal(card.kind === 'week' ? `🖼️ Week ${card.week.n} card` : '🖼️ Your street card', preview, [
     ...(canNativeShare() ? [{ t: '📤 Share', fn: () => { void share(canvas, name); } }] : []),

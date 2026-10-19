@@ -76,10 +76,10 @@ export interface SetLayout {
 const WALK_SET = { x0: -20, x1: 20, z0: -.3, z1: 4.4 };
 const IN = { x: -24, z: 3 };
 export const SETS: Record<Exclude<PlaceId, 'street'>, SetLayout> = {
-  junction: { entry: IN, arrive: { x: -6, z: 3 }, walk: WALK_SET,
-    slots: [{ x: -2, z: 1.2 }, { x: 1.2, z: 1.8 }, { x: -9, z: 1 }],
-    crowd: [{ x: -12, z: 1.4 }, { x: -13.4, z: 1.9 }, { x: 8.5, z: 2.6 }, { x: 11, z: .8 }, { x: 14.5, z: 2.2 }],
-    jobs: { pos: { x: 4.6, z: 1.6 }, deliver: { x: -12.7, z: 3.4 } } },
+  junction: { entry: IN, arrive: { x: -2.5, z: 3.4 }, walk: WALK_SET,
+    slots: [{ x: .6, z: 1.9 }, { x: 2, z: 2.6 }, { x: -11.5, z: 1.4 }],
+    crowd: [{ x: -10.6, z: 2.4 }, { x: -5.4, z: 2.2 }, { x: 8.5, z: 2.6 }, { x: 11, z: .8 }, { x: 14.5, z: 2.2 }],
+    jobs: { pos: { x: 4.6, z: 1.9 }, deliver: { x: -8.1, z: 2.4 } } },
   market: { entry: IN, arrive: { x: -8, z: 3.2 }, walk: WALK_SET,
     slots: [{ x: -3.5, z: 1.6 }, { x: .5, z: 2.2 }, { x: 9, z: 1.7 }],
     crowd: [{ x: -14, z: 1.2 }, { x: -6, z: 1 }, { x: 2.5, z: 1.1 }, { x: 5, z: 2.8 }, { x: 12, z: 1.2 }, { x: 15.5, z: 2.6 }],
@@ -110,6 +110,7 @@ export function clampIn(id: PlaceId, x: number, z: number): P {
 export function arriving(id: PlaceId, f: number): P {
   const from = id === 'street' ? { x: EDGE, z: Z.outside + .6 } : SETS[id].entry, to = id === 'street' ? HOME_SPOT : SETS[id].arrive;
   const k = Math.min(1, Math.max(0, f));
+  if (k === 1) return { x: to.x, z: to.z }; // exactly there, no rounding drift
   return { x: from.x + (to.x - from.x) * k, z: from.z + (to.z - from.z) * k };
 }
 

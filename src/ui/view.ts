@@ -3,7 +3,7 @@
 import { SET, hasGame, saveSettings } from '../core/state';
 import { $ } from '../core/util';
 import type { View3D } from '../render3d/scene';
-import { streetHit } from './interact';
+import { streetHit, talkingTo } from './interact';
 import { toast } from './toast';
 
 let view3d: View3D | null = null;
@@ -12,7 +12,7 @@ let loading: Promise<void> | null = null;
 export function webglOk(): boolean {
   try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; }
 }
-const wants3D = (): boolean => SET.view === '3d' || (SET.view === 'auto' && webglOk());
+export const wants3D = (): boolean => SET.view === '3d' || (SET.view === 'auto' && webglOk());
 export const is3D = (): boolean => view3d != null;
 
 function show(three: boolean): void {
@@ -31,6 +31,7 @@ export function applyView(): Promise<void> {
     .then((m) => {
       view3d = m.start($<HTMLCanvasElement>('#street3d'), {
         onHit: streetHit,
+        talkingTo,
         onSlow: () => {
           if (SET.view !== 'auto') return; // they chose 3D on purpose; respect it
           SET.view = '2d'; saveSettings(); void applyView();

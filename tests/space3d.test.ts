@@ -1,9 +1,9 @@
 /* The 3D street's layout maths (no WebGL needed): it must agree with the 2D street and keep people inside the street. */
 import { describe, expect, it } from 'vitest';
-import { NPCDEF } from '../src/data/content';
+import { HUSTLES, NPCDEF, ROUTINES, type PlaceId } from '../src/data/content';
 import { HOUSES, LW } from '../src/render/layout';
 import {
-  CAM_X, EDGE, EDGE_R, HOME_SPOT, HOUSE_BOXES, WALK, Z, clampWalk, followX, npcSpot, stepToward, toX,
+  CAM_X, EDGE, EDGE_R, HOME_SPOT, HOUSE_BOXES, SETS, WALK, Z, arriving, clampIn, clampWalk, followX, npcSpot, stepToward, toX,
 } from '../src/render3d/space';
 
 describe('3D street layout', () => {
@@ -44,6 +44,38 @@ describe('3D street layout', () => {
     expect(Math.hypot(p.x, p.z)).toBeCloseTo(1);
     expect(stepToward(p, { x: 3, z: 4 }, 10)).toBe(true);
     expect(p).toEqual({ x: 3, z: 4 });
+  });
+
+  it('every place has room for everyone its routines can send there at once', () => {
+    for (const [id, L] of Object.entries(SETS)) {
+      let most = 0;
+      for (const sunday of [false, true]) for (let h = 0; h < 24; h++) {
+        const here = Object.values(ROUTINES).filter((r) => ((sunday && r.sunday) || r.day).some((s) => s.place === id && h >= s.from && h < s.to)).length;
+        most = Math.max(most, here);
+      }
+      expect(L.slots.length, id).toBeGreaterThanOrEqual(most);
+    }
+  });
+
+  it('slots, work spots and arrival points are inside each place you can walk', () => {
+    for (const [id, L] of Object.entries(SETS)) {
+      const w = L.walk, inside = (p: { x: number; z: number }) => p.x >= w.x0 && p.x <= w.x1 && p.z >= w.z0 && p.z <= w.z1;
+      for (const p of [...L.slots, L.arrive, ...Object.values(L.jobs)]) expect(inside(p), `${id} ${JSON.stringify(p)}`).toBe(true);
+      expect(clampIn(id as PlaceId, 999, 999)).toEqual({ x: w.x1, z: w.z1 });
+    }
+  });
+
+  it('every hustle done away from the street has a work spot at its place', () => {
+    for (const h of HUSTLES) if (h.place !== 'street') expect(SETS[h.place as Exclude<PlaceId, 'street'>].jobs[h.id], h.id).toBeDefined();
+  });
+
+  it('a trip walks you in from the road and stops at the arrival point', () => {
+    for (const id of ['street', ...Object.keys(SETS)] as PlaceId[]) {
+      const start = arriving(id, 0), end = arriving(id, 1);
+      expect(start.x).toBeLessThan(end.x);
+      expect(arriving(id, 2)).toEqual(end);
+    }
+    expect(arriving('street', 1)).toEqual({ x: HOME_SPOT.x, z: HOME_SPOT.z });
   });
 
   it('the camera follows you but stops at the ends of the street', () => {

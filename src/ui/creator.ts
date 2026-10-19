@@ -4,10 +4,26 @@ import { $, clamp } from '../core/util';
 import { BGS, HAIRS, OUTFITS, SKINS, TRAITS } from '../data/content';
 import { drawPreview } from '../render/preview';
 import { toast } from './toast';
+import { wants3D } from './view';
 
 export const C = { name: '', gender: 0, skin: 2, hair: 0, outfit: 0, bg: 'hustler', traits: [] as string[] };
 
-export function redrawPreview(): void { drawPreview($<HTMLCanvasElement>('#preview'), C); }
+let stop3d: (() => void) | null = null, loading3d = false;
+/** The 2D drawing always updates; in 3D mode a turntable of the real 3D character takes its place. */
+export function redrawPreview(): void {
+  drawPreview($<HTMLCanvasElement>('#preview'), C);
+  if (stop3d || loading3d || !wants3D()) return;
+  loading3d = true;
+  import('../render3d/portrait')
+    .then((m) => { stop3d = m.startPreview($<HTMLCanvasElement>('#preview3d'), () => C); $('#preview').classList.add('off'); $('#preview3d').classList.remove('off'); })
+    .catch(() => { /* offline before the 3D chunk was cached: the 2D drawing stays */ })
+    .finally(() => { loading3d = false; });
+}
+/** Free the turntable's GPU context once the game starts. */
+export function stopPreview3d(): void {
+  stop3d?.(); stop3d = null;
+  $('#preview3d')?.classList.add('off'); $('#preview')?.classList.remove('off');
+}
 
 /** Render one row of selectable chips/swatches. */
 function options<T>(sel: string, items: T[], render: (d: HTMLDivElement, it: T, i: number) => boolean, onPick: (it: T, i: number) => void): void {

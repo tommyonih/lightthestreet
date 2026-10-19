@@ -9,7 +9,7 @@ import { setupObjectives } from './game/progress';
 import { ensureWeek } from './game/challenges';
 import { tick } from './game/sim';
 import { initRenderer } from './render/street';
-import { C, applyCreator, buildCreator, redrawPreview } from './ui/creator';
+import { C, applyCreator, buildCreator, redrawPreview, stopPreview3d } from './ui/creator';
 import { updHUD, updSoundBtns } from './ui/hud';
 import { genPanel, initStreetClicks, npcClick } from './ui/interact';
 import { initGuide, initPlaceCard } from './ui/map';
@@ -39,7 +39,7 @@ function startGame(fresh: boolean): void {
     G.intro = INTRO_DONE; G.introT = 0;
   }
   ensureWeek();
-  genHum(false); show('scr-game'); updHUD(); renderPhone('meter'); void applyView();
+  genHum(false); stopPreview3d(); show('scr-game'); updHUD(); renderPhone('meter'); void applyView();
   if (fresh) toast(`🎯 Welcome to the street, <b>${esc(G.name)}</b>! Meter: ${G.meterUnits}u • ₦${fmt(G.cash)} (virtual). Light fit go anytime — stay ready!`, 'sys');
 }
 

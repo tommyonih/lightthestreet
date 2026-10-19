@@ -72,7 +72,9 @@ label.lbl{display:block;font-size:11.5px;letter-spacing:1.2px;color:var(--dim);m
 input.txt{width:100%;padding:13px;border-radius:12px;border:1px solid var(--line);background:#0d1018;color:var(--ink);font-size:16px;font-family:inherit;}
 input.txt:focus{outline:2px solid var(--amber);outline-offset:1px;}
 #createWrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
-#preview{background:#0d1018;border-radius:16px;border:1px solid var(--line);}
+#preview,#preview3d{background:#0d1018;border-radius:16px;border:1px solid var(--line);}
+#preview3d{width:140px;height:190px;background:linear-gradient(180deg,#25304d,#141a2c);}
+#preview.off,#preview3d.off{display:none;}
 .iconbtn{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);
   display:grid;place-items:center;cursor:pointer;padding:0;font-size:17px;flex-shrink:0;transition:transform .1s;}
 .iconbtn:active{transform:scale(.92);}
@@ -90,6 +92,10 @@ input.txt:focus{outline:2px solid var(--amber);outline-offset:1px;}
 .cash{font-weight:900;font-size:16px;color:var(--amber);background:rgba(255,179,71,.1);border:1px solid rgba(255,179,71,.25);
   padding:6px 10px;border-radius:12px;white-space:nowrap;transition:transform .2s var(--ease);}
 .cash.bump{transform:scale(1.12);}
+/* ₦ coins flying to the cash pill when you get paid (ui/juice.ts) */
+.coin{position:fixed;z-index:45;pointer-events:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+  font-size:13px;font-weight:900;color:#3a2205;background:radial-gradient(circle at 35% 30%,#ffe29a,var(--amber) 55%,var(--amber2));
+  box-shadow:0 2px 6px rgba(0,0,0,.4),inset 0 -2px 0 rgba(0,0,0,.15);}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px;}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:7px 8px 8px;min-width:0;transition:border-color .3s,background .3s;}
 .tile .th{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;}
@@ -324,6 +330,8 @@ input.txt:focus{outline:2px solid var(--amber);outline-offset:1px;}
   #stage.away #street{filter:brightness(.45) saturate(.6) blur(2px);transition:filter .6s;}
   .pcIn{min-height:0;}
   .pcIn.travel{padding:14px 0;}
+  #placeCard.mini{top:var(--top);left:var(--edge);right:auto;padding:10px 14px;border-radius:18px;}
+  #placeCard.mini .pcIn.travel{padding:4px 0;}
   .pcHead{padding-right:0;}
   #placeCard.withWp{padding-bottom:14px;}
 

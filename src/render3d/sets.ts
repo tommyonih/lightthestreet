@@ -14,6 +14,8 @@ export interface PlaceSet {
   pickables: THREE.Object3D[];
   /** Night-glowing bits, driven by the place's light level. */
   signs: THREE.MeshStandardMaterial[]; glows: THREE.Sprite[]; bulbs: THREE.MeshBasicMaterial[];
+  /** Lanterns: lit at night regardless of power. */
+  lanterns: THREE.Sprite[];
   light: THREE.PointLight;
   /** Background people; shown while the place is open. */
   crowd: { p: Person; home: P; roam: number }[];
@@ -77,7 +79,8 @@ function umbrella(g: THREE.Group, x: number, z: number, a: string, b: string): v
 }
 function far(g: THREE.Group, seed: string): void {
   const rng = seededRng(seed), m = std('#1e2333', { roughness: 1 });
-  for (let x = -46; x < 46;) { const w = 2 + rng() * 3.5, h = 3 + rng() * 7; g.add(box(w, h, 2, m, x + w / 2, h / 2, -22 - rng() * 6)); x += w + rng(); }
+  // low and far back, so they read as the rest of town behind the place, not walls around it
+  for (let x = -60; x < 60;) { const w = 3 + rng() * 4, h = 2 + rng() * 4; g.add(box(w, h, 2, m, x + w / 2, h / 2, -34 - rng() * 8)); x += w + rng(); }
 }
 function bench(g: THREE.Group, x: number, z: number, len = 2.2): void {
   const wood = std('#6b4a30');
@@ -101,6 +104,13 @@ function addBulb(s: PlaceSet, x: number, y: number, z: number, color = '#ffd27a'
   const gl = glow(color, size); gl.position.set(x, y, z + .1); s.group.add(gl); s.glows.push(gl);
 }
 
+/** A kerosene lantern on a stall: lit every night, NEPA or no NEPA. */
+function addLantern(s: PlaceSet, x: number, y: number, z: number): void {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, .22, 8), new THREE.MeshBasicMaterial({ color: '#ffb35c' }));
+  m.position.set(x, y, z); s.group.add(m);
+  const gl = glow('#ff9a40', 2); gl.position.set(x, y + .05, z + .05); s.group.add(gl); s.lanterns.push(gl);
+}
+
 const BUILD: Record<Exclude<PlaceId, 'street'>, Build> = {
   junction(g, s) {
     // the crossing road, a motor park with okadas, a keke, a danfo and the POS umbrella
@@ -110,8 +120,9 @@ const BUILD: Record<Exclude<PlaceId, 'street'>, Build> = {
     addSign(s, 'JUNCTION MOTOR PARK', 7, 1.1, '#1f6a3a', '#ffffff', -12, 5.9, -.9, 'Okada · Keke · Danfo');
     addSign(s, 'GEN REPAIRS & SPARE PARTS', 7.6, 1.1, '#c0392b', '#ffe9b0', 12, 4.4, -.9);
     const rider = hit(s, new THREE.Group(), { kind: 'act', id: 'okadaGist' });
-    [['#c0392b', -14.5], ['#2f6db5', -13], ['#3c8a4a', -11.5]].forEach(([c, x]) => { const o = okada(c as string); o.position.set(x as number, 0, 3.2); o.rotation.y = Math.PI / 2; rider.add(o); });
+    [['#c0392b', -9.6], ['#2f6db5', -8.1], ['#3c8a4a', -6.6]].forEach(([c, x]) => { const o = okada(c as string); o.position.set(x as number, 0, 1.4); o.rotation.y = Math.PI / 2; rider.add(o); });
     g.add(rider);
+    addLantern(s, -8.1, 1.2, 1.9); addLantern(s, 3.4, .95, 1.2);
     const k = keke(); k.position.set(9, 0, 3.4); g.add(k);
     const d = danfo(); d.position.set(14, 0, 7); g.add(d);
     umbrella(g, 4.6, .6, '#e63946', '#ffb347');
@@ -132,6 +143,7 @@ const BUILD: Record<Exclude<PlaceId, 'street'>, Build> = {
     const produce = [std('#d84b2a'), std('#f2a33a'), std('#4f8a3a'), std('#e9d8a6')];
     for (let i = 0; i < 6; i++) {
       const x = -9 + i * 3.3; umbrella(g, x, -.6, colors[i], colors[(i + 2) % 6]);
+      if (i % 2 === 0) addLantern(s, x + .9, .95, -.1);
       g.add(box(2.2, .8, 1, std('#6b4a30'), x, .4, -.4));
       for (let k = 0; k < 5; k++) { const p = new THREE.Mesh(new THREE.SphereGeometry(.17, 6, 5), produce[(i + k) % 4]); p.position.set(x - .8 + k * .4, .95, -.4 + (k % 2) * .2); g.add(p); }
     }
@@ -207,7 +219,7 @@ const LOOKS = ['lowcut', 'afro', 'braids', 'locs', 'natural', 'straight'];
 export function buildSet(id: Exclude<PlaceId, 'street'>, shadows: boolean): PlaceSet {
   const group = new THREE.Group();
   const light = new THREE.PointLight('#ffd9a0', 0, 18, 1.4); light.position.set(0, 5, 2); group.add(light);
-  const s: PlaceSet = { id, group, pickables: [], signs: [], glows: [], bulbs: [], light, crowd: [] };
+  const s: PlaceSet = { id, group, pickables: [], signs: [], glows: [], bulbs: [], lanterns: [], light, crowd: [] };
   base(group, shadows); BUILD[id](group, s);
   if (shadows) group.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   // background people, the same look every visit

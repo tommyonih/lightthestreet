@@ -39,7 +39,8 @@ function mark(x: CanvasRenderingContext2D, cx: number, cy: number, ok: boolean):
   x.stroke();
 }
 
-export function renderShareCard(card: CardKind, canvas: HTMLCanvasElement = document.createElement('canvas')): HTMLCanvasElement {
+/** `avatar`: a portrait of the player to use instead of the 2D drawing (the 3D view passes one). */
+export function renderShareCard(card: CardKind, canvas: HTMLCanvasElement = document.createElement('canvas'), avatar?: HTMLCanvasElement): HTMLCanvasElement {
   canvas.width = CARD_W; canvas.height = CARD_H;
   const x = canvas.getContext('2d')!;
   const font = (w: number, px: number) => `${w} ${px}px "Segoe UI", system-ui, sans-serif`;
@@ -58,11 +59,16 @@ export function renderShareCard(card: CardKind, canvas: HTMLCanvasElement = docu
   x.fillText(card.kind === 'week' ? `Week ${card.week.n} challenge card` : `My street report — Day ${G.day}`, CARD_W / 2, 172);
 
   // player
-  const avatar = document.createElement('canvas'); avatar.width = 140; avatar.height = 190;
-  drawPreview(avatar, { name: null, skin: G.skin, hair: G.hair, outfit: G.outfit });
+  const pic = avatar ?? document.createElement('canvas');
+  if (!avatar) { pic.width = 140; pic.height = 190; drawPreview(pic, { name: null, skin: G.skin, hair: G.hair, outfit: G.outfit }); }
   x.save(); x.beginPath();
   if (x.roundRect) x.roundRect(80, 220, 280, 380, 28); else x.rect(80, 220, 280, 380); // older browsers
-  x.clip(); x.drawImage(avatar, 80, 220, 280, 380); x.restore();
+  x.clip();
+  if (avatar) { // the 3D portrait is transparent: give it the preview's backdrop
+    const g = x.createLinearGradient(0, 220, 0, 600); g.addColorStop(0, '#25304d'); g.addColorStop(1, '#141a2c');
+    x.fillStyle = g; x.fillRect(80, 220, 280, 380);
+  }
+  x.drawImage(pic, 80, 220, 280, 380); x.restore();
   x.textAlign = 'left';
   x.fillStyle = '#f5eeda'; x.font = font(800, 64); x.fillText(G.name, 400, 300);
   x.fillStyle = '#b9b2a0'; x.font = font(600, 32); x.fillText(BGS.find((b) => b.id === G.bg)?.n ?? '', 400, 350);

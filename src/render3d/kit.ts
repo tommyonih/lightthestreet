@@ -107,6 +107,50 @@ export function groundDisc(r: number, light?: string): THREE.Mesh {
   m.rotation.x = -Math.PI / 2; m.position.y = .02; return m;
 }
 
+/** Facial expressions, painted on a transparent decal that sits on the front of the head.
+    `frame` 1 is the alternate frame: a blink, or the open mouth while talking. */
+export function faceTex(face: string, frame = 0): THREE.Texture {
+  return once(`face${face}${frame}`, () => tex(canvas(128, 128, (c) => {
+    const ink = '#1a1210';
+    c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = ink; c.fillStyle = ink;
+    const eye = (x: number, y: number, look = 0, r = 7) => {
+      c.fillStyle = '#f5efe6'; c.beginPath(); c.ellipse(x, y, r + 3, r + 1, 0, 0, 7); c.fill();
+      c.fillStyle = ink; c.beginPath(); c.arc(x + look, y + 1, r - 2, 0, 7); c.fill();
+    };
+    const shut = (x: number, y: number, up = false) => { c.lineWidth = 4; c.beginPath(); c.arc(x, y + (up ? 6 : -4), 9, up ? Math.PI * 1.15 : Math.PI * .15, up ? Math.PI * 1.85 : Math.PI * .85); c.stroke(); };
+    const brow = (x: number, y: number, tilt: number) => { c.lineWidth = 5; c.beginPath(); c.moveTo(x - 10, y + tilt); c.lineTo(x + 10, y - tilt); c.stroke(); };
+    const mouth = (path: () => void, fill = false) => { c.lineWidth = 4.5; c.beginPath(); path(); if (fill) { c.fillStyle = '#5a1e1e'; c.fill(); } c.stroke(); };
+    const L = 44, R = 84, Y = 56, M = 92;
+    const blink = frame === 1 && face !== 'talk';
+    switch (face) {
+      case 'happy':
+        if (blink) { shut(L, Y); shut(R, Y); } else { shut(L, Y, true); shut(R, Y, true); }
+        mouth(() => { c.moveTo(48, M - 6); c.quadraticCurveTo(64, M + 14, 80, M - 6); c.closePath(); }, true); break;
+      case 'annoyed':
+        if (blink) { shut(L, Y); shut(R, Y); } else { eye(L, Y); eye(R, Y); }
+        brow(L, Y - 15, -4); brow(R, Y - 15, 4);
+        mouth(() => { c.moveTo(52, M + 4); c.quadraticCurveTo(64, M - 4, 76, M + 4); }); break;
+      case 'shocked':
+        eye(L, Y, 0, 9); eye(R, Y, 0, 9); brow(L, Y - 22, 2); brow(R, Y - 22, -2);
+        mouth(() => { c.ellipse(64, M + 2, 8, 11, 0, 0, 7); }, true); break;
+      case 'sleepy':
+        c.lineWidth = 4; for (const x of [L, R]) { c.beginPath(); c.moveTo(x - 9, Y + 2); c.lineTo(x + 9, Y + 2); c.stroke(); }
+        mouth(() => { c.ellipse(64, M, 5, 4, 0, 0, 7); }, true); break;
+      case 'sideeye':
+        if (blink) { shut(L, Y); shut(R, Y); } else { eye(L, Y + 2, 5, 6); eye(R, Y + 2, 5, 6); }
+        brow(L, Y - 13, 0); brow(R, Y - 17, -5);
+        mouth(() => { c.moveTo(50, M + 2); c.quadraticCurveTo(66, M + 2, 78, M - 4); }); break;
+      case 'talk':
+        eye(L, Y); eye(R, Y);
+        if (frame === 1) mouth(() => { c.ellipse(64, M, 9, 7, 0, 0, 7); }, true);
+        else mouth(() => { c.moveTo(52, M); c.quadraticCurveTo(64, M + 6, 76, M); }); break;
+      default:
+        if (blink) { shut(L, Y); shut(R, Y); } else { eye(L, Y); eye(R, Y); }
+        mouth(() => { c.moveTo(52, M); c.quadraticCurveTo(64, M + 8, 76, M); });
+    }
+  })));
+}
+
 /** A painted signboard. The material glows at night when its place has power (set emissiveIntensity per frame). */
 export function signboard(text: string, w: number, h: number, bg: string, fg: string, sub = ''): THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> {
   const t = once(`sign${text}${bg}${fg}${sub}`, () => tex(canvas(512, Math.round(512 * h / w), (c) => {
