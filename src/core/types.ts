@@ -191,4 +191,8 @@ export interface Choice {
   fn?: () => void;
 }
 
-export interface Settings { sound: boolean; motion: boolean }
+export interface Settings {
+  sound: boolean; motion: boolean;
+  /** Street view: 3D when the device can (auto), or forced. Auto drops to 2D if 3D runs too slow. */
+  view: 'auto' | '3d' | '2d';
+}

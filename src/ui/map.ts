@@ -99,6 +99,8 @@ export function wireMap(root: HTMLElement, after: () => void): void {
 /* ---------- the place card over the street view ---------- */
 
 let cardKey = '';
+/** The player folded the card to look around this place (3D only); unfolds when they move on. */
+let folded = false, foldedAt = '';
 let onNpc: (id: string) => void = () => {};
 let onMap: () => void = () => {};
 /** The card needs the neighbour panel and the phone, which live higher up in ui/. */
@@ -107,9 +109,15 @@ export function initPlaceCard(npc: (id: string) => void, map: () => void): void 
 export function updPlaceCard(): void {
   const el = document.getElementById('placeCard');
   if (!el || !hasGame() || isHeadless()) return;
+  document.getElementById('stage')?.classList.toggle('away', !atHome()); // 2D Classic dims the street behind the card
   if (atHome()) { if (cardKey !== 'home') { el.classList.remove('show'); cardKey = 'home'; } return; }
   const job = currentHustle(), ppl = G.trip ? [] : peopleAt(G.loc);
-  const key = [G.loc, G.trip?.to, Math.round(tripProgress() * 20), job?.id, Math.round(jobProgress() * 20), jobStalled(), ppl.join(), Math.floor(G.minute / 60), G.cash, G.phone > 94, G.hunger < 15].join('|');
+  // in 3D the place is on screen, so the card can fold to its header; the ride itself is always just a strip
+  const v3d = document.body.classList.contains('v3d');
+  if (G.loc !== foldedAt) { folded = false; foldedAt = G.loc; }
+  const mini = v3d && (!!G.trip || folded);
+  el.classList.toggle('mini', mini);
+  const key = [G.loc, G.trip?.to, Math.round(tripProgress() * 20), job?.id, Math.round(jobProgress() * 20), jobStalled(), ppl.join(), Math.floor(G.minute / 60), G.cash, G.phone > 94, G.hunger < 15, mini, v3d].join('|');
   if (key === cardKey) return;
   cardKey = key; el.classList.add('show');
 
@@ -125,8 +133,11 @@ export function updPlaceCard(): void {
   const work = job ? `<div class="pcJob">${jobStalled() ? '⏳ Waiting for light…' : job.verb} · ${Math.round(jobProgress() * 100)}%
     <div class="tb"><i style="width:${Math.round(jobProgress() * 100)}%"></i></div></div>` : '';
   const homeWalk = tripMins(G.loc, 'street', 'walk'), fare = okadaFare(G.loc, 'street');
-  el.innerHTML = `<div class="pcIn">
-    <div class="pcHead"><div class="pcEm">${p.emoji}</div><div><b>${p.n}</b><span>${openLabel(G.loc)}</span></div></div>
+  const fold = v3d ? `<button class="iconbtn flat pcFold" data-pc="fold" aria-label="${mini ? 'Show actions' : 'Fold card to look around'}">${mini ? '▾' : '▴'}</button>` : '';
+  el.innerHTML = mini ? `<div class="pcIn">
+    <div class="pcHead"><div class="pcEm">${p.emoji}</div><div><b>${p.n}</b><span>${ppl.length ? `👥 ${ppl.length} neighbour(s) here · ` : ''}tap ▾ for actions</span></div>${fold}</div>
+    ${work}</div>` : `<div class="pcIn">
+    <div class="pcHead"><div class="pcEm">${p.emoji}</div><div><b>${p.n}</b><span>${openLabel(G.loc)}</span></div>${fold}</div>
     ${work}
     ${job ? '' : `<div class="row"><button class="btn small primary" data-pc="walk">🏠 Walk home · ${homeWalk} min</button>
       <button class="btn small" data-pc="okada" ${G.cash < fare ? 'disabled' : ''}>🛵 Okada · ₦${fmt(fare)}</button></div>`}
@@ -134,6 +145,7 @@ export function updPlaceCard(): void {
     ${job ? '' : `<div class="pcActs">${acts.map((a) => { const why = actionReady(a); return `<button class="btn small" data-act="${a.id}" ${why ? 'disabled' : ''}>${a.t}<div class="evSub">${why ?? a.sub}</div></button>`; }).join('')}</div>`}
   </div>`;
   const redraw = () => { cardKey = ''; updPlaceCard(); };
+  el.querySelector<HTMLElement>('[data-pc="fold"]')?.addEventListener('click', () => { folded = !folded; redraw(); });
   el.querySelectorAll<HTMLElement>('[data-npc]').forEach((b) => { b.onclick = () => onNpc(b.dataset.npc!); });
   el.querySelectorAll<HTMLElement>('[data-act]').forEach((b) => { b.onclick = () => { doPlaceAction(b.dataset.act!); redraw(); }; });
   const home = (mode: 'walk' | 'okada') => () => { startTrip('street', mode); redraw(); };

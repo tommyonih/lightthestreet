@@ -28,7 +28,9 @@ Project plan and roadmap: [docs/PLAN.md](docs/PLAN.md). Design rules: [docs/DESI
 | `src/game/world.ts` | Places and travel: where you are, walk/okada trips, opening hours, unlocks, place actions (`PLACE_ACTIONS`). Places and routes are `PLACES`/`PATHS` in content |
 | `src/game/meetings.ts` | Street meetings and voting. Add a motion by appending to `MOTIONS` (give each neighbour a stance) |
 | `src/game/` | Economy, generator, street fund, intro, eat/sleep actions |
-| `src/render/` | Canvas street scene and character preview |
+| `src/render/` | Canvas street scene and character preview (the 2D Classic view) |
+| `src/render3d/` | The 3D street (three.js, one lazy chunk): `scene.ts` loop/camera/lighting/picking, `world3d.ts` geometry, `people.ts` figures, `kit.ts` code-drawn textures, `space.ts` pure layout maths shared with tests |
+| `src/ui/view.ts` | Picks 2D or 3D (`SET.view`), lazy-loads the 3D chunk, falls back to 2D if WebGL is missing or frames are slow |
 | `src/ui/` | Modal, toast, HUD + street feed, phone apps (bottom sheet + tab bar), street clicks, screens, creator, results |
 | `src/ui/map.ts` | Map app (SVG from `PLACES`/`PATHS`) and the place card that covers the street while you're out |
 | `src/ui/shell.ts` | App behaviour: splash, service worker, install prompt, haptics, sheet swipe-to-close |

@@ -19,7 +19,8 @@ A change is done only when `npm test` and `npm run build` both pass. Deploys go 
 
 ## Stack and hard rules
 
-- Vanilla TypeScript, Vite, HTML/CSS and Canvas 2D. **No framework.** The only runtime dependency is `@supabase/supabase-js`, loaded lazily. Don't add a package without asking.
+- Vanilla TypeScript, Vite, HTML/CSS, Canvas 2D and three.js for the 3D street. **No framework.** Runtime dependencies: `@supabase/supabase-js` and `three`, both loaded lazily (`three` only when the 3D view starts). Nothing outside `src/render3d/` may import `three`. Don't add a package without asking.
+- The 2D street is a permanent fallback (no WebGL, slow phones, user choice). Every street feature must work in both views; the 3D view reads game state and reports taps through `streetHit()` in `ui/interact.ts`, it never changes game state itself.
 - The game must work fully offline and signed out. `localStorage` is the live save; wrap every storage call in try/catch, as `src/core/state.ts` does.
 - Supabase (optional accounts, cloud save, reports) lives in `src/net/` and `supabase/`; see [supabase/README.md](supabase/README.md). `core/` and `game/` never import `net/`. Network code plugs in through hooks (`onSave`, `onWeekEnd`). Every cloud feature must no-op when `cloudEnabled()` is false (as in tests and local dev without `.env.local`).
 - Schema changes go in a **new** file in `supabase/migrations/`. Every table gets RLS with owner-only policies in the same migration. Only the anon key goes in the client; never the service_role key.
@@ -37,7 +38,7 @@ A change is done only when `npm test` and `npm run build` both pass. Deploys go 
 | A place on the map | `PLACES` + a route in `PATHS` (`src/data/content.ts`); things to do there go in `PLACE_ACTIONS` in `src/game/world.ts` |
 | Game rules or simulation | `src/game/` (one file per system; `sim.ts` owns `tick()`) |
 | Shared types / state / save / audio / haptics | `src/core/` |
-| Anything drawn on a canvas | `src/render/` |
+| Anything drawn on a canvas | `src/render/` (2D) and, for the 3D street, `src/render3d/` (layout maths without three.js go in `space.ts` so tests can cover them) |
 | Supabase client, auth, cloud save/reports | `src/net/` (`supabase.ts`, `auth.ts`, `cloud.ts`) |
 | Database tables, RLS, storage policies | `supabase/migrations/` |
 | DOM UI: sheets, modals, HUD, phone apps | `src/ui/`. New phone apps go in `src/ui/phone.ts` (`Tab`, `APPS`, render map) |
@@ -63,7 +64,7 @@ Dependency direction: `data` → `core` → `game` → `render` → `net` → `u
 
 - Test seams: `setModalDriver` (auto-answers modals), `setHeadless` (silences toasts), `setScreenGate`. Use them, not mocks of game modules.
 - The balance tests check grid uptime, blackouts per day, meter safety and event frequency. If a balance change breaks them, either retune the change or explain why the threshold should move. Don't loosen a threshold silently.
-- After changing anything in `src/render/`, run the app (`npm run dev`) and look at it. Tests don't check visuals.
+- After changing anything in `src/render/` or `src/render3d/`, run the app (`npm run dev`) and look at it in both views (the 2D/3D button in the HUD). Tests don't check visuals, and headless Chrome renders WebGL in software, so frame rate must be checked on a real phone.
 
 ## Code style
 

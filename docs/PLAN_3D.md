@@ -163,9 +163,10 @@ Same rules as GRAPHICS_PLAN.md, with 3D-specific limits:
 
 Do them in order; each one ships on its own and is verified (`npm test`, `npm run build`, looked at on a real phone) before the next.
 
-### Phase 0: Decisions and spike · 2–3 days
-- Agree the decisions below.
-- Spike: three.js lazy chunk renders the street as boxes on a mid-range Android. Measure bundle size and frame rate. Go/no-go.
+### Phase 0: Decisions and spike · ✓ mostly done
+- Decisions 1, 2 and 6 agreed: add `three` (0.186), keep 2D Classic, 3D replaces GRAPHICS_PLAN Phases 2–5.
+- Bundle measured: the 3D chunk is 155 kB gzipped (inside the 150–180 kB estimate); the main bundle is unchanged at 63 kB.
+- **Still open:** frame rate on a real mid-range and a cheap Android. Headless Chrome renders WebGL in software, so it can't answer this. The in-game probe (`onSlow`) drops auto-mode players to 2D if frames average over 50ms.
 
 ### Phase 1: Places and travel in the sim (no 3D yet) · ✓ done
 
@@ -182,11 +183,13 @@ Shipped: waypoints (`G.waypoint`, save v8; a place or `npc:<id>` that follows th
 - `render/mapView.ts` (full map) and `render/minimap.ts`; waypoints; "Go to" buttons in Hustle, Tasks, neighbour cards and events; arrival cards.
 - Done when: a first-time tester completes the Day 1 objectives without asking where anything is.
 
-### Phase 3: 3D foundation · 5–7 days
+### Phase 3: 3D foundation · ✓ built, awaiting a real-phone check
 - `src/render3d/` with three.js lazy-loaded; quality tier detection; 2D fallback switch.
 - Street built from code (boxes and planes, current colours), fixed follow camera, tap-to-walk on the path graph, raycast picking wired to the existing handlers.
 - Grid-on/off lighting and day/night from `timeLook()`.
 - Done when: the street plays fully in 3D at 30fps+ on the test phone, and switching to 2D Classic gives the same game.
+
+Shipped: street, houses, wires, transformer, streetlight, trees and far skyline from code; people from the creator's skin/hair/outfit data with walk and work animations; day/night and blackout flicker (shared `lampLevel()`), your gen with smoke, rain streaks, wet road, lightning; tap picking into the same panels as 2D; tap-to-walk; follow camera with pinch/wheel zoom; quality tiers (low: no AA, DPR 1.25, no shadow maps, 30fps cap; high: AA, DPR 2, sun shadows); `SET.view` auto/3D/2D with a HUD toggle and a slow-frame fallback. Differences: tap-to-walk is a clamped walk across the yard rather than a path graph (one street doesn't need one; the graph comes with Phase 4's places); the barber and content-creator stall props aren't modelled yet, only the work pose and a progress tag.
 
 ### Phase 4: The other places · 1–2 weeks (art-bound)
 - Junction, market, fuel station, DisCo office, campus, church, built as `.glb` (Blender, low-poly) or from code for simple ones.

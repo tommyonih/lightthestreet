@@ -13,6 +13,7 @@ import { C, applyCreator, buildCreator, redrawPreview } from './ui/creator';
 import { updHUD, updSoundBtns } from './ui/hud';
 import { genPanel, initStreetClicks, npcClick } from './ui/interact';
 import { initGuide, initPlaceCard } from './ui/map';
+import { applyView, toggleView } from './ui/view';
 import { openModal } from './ui/modal';
 import { closePhone, navTo, openPhone, renderPhone } from './ui/phone';
 import { hydrateIcons } from './ui/icons';
@@ -38,7 +39,7 @@ function startGame(fresh: boolean): void {
     G.intro = INTRO_DONE; G.introT = 0;
   }
   ensureWeek();
-  genHum(false); show('scr-game'); updHUD(); renderPhone('meter');
+  genHum(false); show('scr-game'); updHUD(); renderPhone('meter'); void applyView();
   if (fresh) toast(`🎯 Welcome to the street, <b>${esc(G.name)}</b>! Meter: ${G.meterUnits}u • ₦${fmt(G.cash)} (virtual). Light fit go anytime — stay ready!`, 'sys');
 }
 
@@ -74,6 +75,7 @@ function wire(): void {
   click('#btnHustle', () => openPhone('hustle'));
   click('#btnSleep', sleepAction);
   click('#pillPlace', () => openPhone('map'));
+  click('#btnView', toggleView);
   click('#btnEnd', () => openModal('🏁 End this session?', 'Your progress dey saved automatically. You fit continue anytime.', [
     { t: 'Show my Street Report', fn: () => { endSession(); void fileReport({ kind: 'session' }).then((ok) => { if (ok) toast('☁️ Street Report saved to your account.', 'sys'); }); } }, { t: 'Continue playing' }]));
   click('#btnCopy', copySummary);

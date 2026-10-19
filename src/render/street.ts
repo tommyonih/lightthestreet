@@ -417,7 +417,7 @@ function drawHomePin(t: number): void {
 let lastFrame = 0;
 function render(): void {
   requestAnimationFrame(render);
-  if (!ctx || !hasGame() || !$('#scr-game').classList.contains('active')) return;
+  if (!ctx || !hasGame() || !$('#scr-game').classList.contains('active') || cv.classList.contains('off')) return; // 'off' = 3D view is on
   const t = performance.now() / 1000;
   const dt = Math.min(.1, lastFrame ? t - lastFrame : 0); lastFrame = t;
   const h = hourNow(), L = timeLook(h, G.weather), lights: Light[] = [];

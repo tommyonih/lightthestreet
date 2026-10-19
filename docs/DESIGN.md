@@ -43,12 +43,14 @@ Rules: use tokens, not new hex values. Status colours always mean the same thing
 ## Layout
 
 - Phone-first and full-screen on mobile, including safe areas (`--safe-t`, `--safe-b`).
-- On desktop it's a 430px phone frame centred on a dark radial background.
+- Tablets and small laptops (700–1019px wide) get a 430px phone frame centred on a dark radial background.
+- Wide screens (≥1020px wide, ≥600px tall) go full window, LagosLife-style: the street fills the screen and the UI floats over it in translucent panels. HUD pill top centre; "where am I" chip or place card top left; minimap top right with the action rail under it; street feed bottom left; tab bar pill bottom centre with the waypoint bar above it. Phone apps open as a right-hand side panel, decisions as a centred dialog. When you're away, the street behind the place card is dimmed and blurred. All of this is one `@media` block at the end of `styles.css`; the phone layout is untouched.
 - The game screen is HUD tiles → street canvas (860:470) → action bar → feed, with the tab bar at the bottom. The phone apps open as a bottom sheet with swipe-to-close.
 
 ## Art
 
-- Canvas 2D, drawn in code, no image assets. Characters are built from skin, hair and outfit data in `content.ts`.
+- Two views of the same street: **3D** (three.js, low-poly, flat-ish shading, code-built geometry) and **2D Classic** (Canvas 2D). Both are drawn in code with no image assets; textures (fabric, zinc, grain, windows) are painted on small canvases at runtime. Characters in both are built from skin, hair and outfit data in `content.ts`.
+- 3D rules: warm palette from the 2D houses, light as the hero (emissive windows and bulbs, glow sprites, few real point lights), blob shadows on low-end phones. See [PLAN_3D.md](PLAN_3D.md).
 - Night is the default mood. Light sources (bulbs, gen glow, lanterns) should visibly change the scene when the power changes.
 - Phase 2 goal: sprite-quality characters, idle animation, day/night cycle, weather and facial expressions.
 

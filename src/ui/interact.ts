@@ -10,10 +10,11 @@ import { fun, npcDef, npcState, powered, rel } from '../game/helpers';
 import { checkAch, checkObj } from '../game/progress';
 import { moodLabel, recallLine, remember } from '../game/memory';
 import { whereabouts } from '../game/schedule';
-import { atHome, needHome } from '../game/world';
+import { atHome, doPlaceAction, needHome } from '../game/world';
+import type { Hit } from '../render3d/space';
 import { HOUSE_Y, LH, PLAYER_HOUSE, npcAt, toStreet } from '../render/street';
 import { modalOpen, openModal } from './modal';
-import { openPhone } from './phone';
+import { openPhone, type Tab } from './phone';
 import { toast } from './toast';
 import { updHUD } from './hud';
 
@@ -28,6 +29,17 @@ export function initStreetClicks(canvas: HTMLCanvasElement): void {
     if (G.gen > 0 && x > px + 6 && x < px + 62 && y > LH - 212 && y < LH - 160) { genPanel(); return; }
     if (x > PLAYER_HOUSE.x && x < px + 64 && y > LH - 306 && y < LH - 160) housePanel();
   });
+}
+
+/** A tap on the 3D street: the same panels as the 2D street. */
+export function streetHit(h: Hit): void {
+  if (!hasGame() || modalOpen) return;
+  if (h.kind === 'npc') npcClick(h.id);
+  else if (h.kind === 'act') doPlaceAction(h.id); // a stall, a door, the okada park: the place card's own actions
+  else if (h.kind === 'app') openPhone(h.tab as Tab);
+  else if (h.kind === 'meter') openPhone('meter');
+  else if (h.kind === 'gen') genPanel();
+  else housePanel();
 }
 
 const GIST: Record<string, string> = {

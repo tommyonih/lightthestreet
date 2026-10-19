@@ -21,7 +21,7 @@ export function T(): number { return G.day * 1440 + G.minute; }
 
 /** Settings live outside the save so the menu sound toggle never touches game state. */
 export const SET: Settings = (() => {
-  const d: Settings = { sound: true, motion: true };
+  const d: Settings = { sound: true, motion: true, view: 'auto' };
   try { return Object.assign(d, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { return d; }
 })();
 export function saveSettings(): void { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(SET)); } catch { /* storage blocked */ } }

@@ -90,6 +90,7 @@ Rules:
 |---|---|---|
 | Language | TypeScript, `strict` | Large state object; types catch save/schema mistakes |
 | Framework | None (vanilla DOM + Canvas 2D) | Small bundle, fast on cheap Android phones, full control of rendering |
+| 3D street | three.js, lazy chunk (~155 kB gz), 2D Classic kept as fallback | WebGL scene graph without writing an engine; loads only for players in 3D mode ([PLAN_3D.md](PLAN_3D.md)) |
 | Build | Vite 5 | Fast dev server, simple static output |
 | Tests | Vitest + jsdom | Run the real markup headlessly; scripted players play full weeks for balance |
 | Storage | `localStorage` | Works offline, enough for one save |
