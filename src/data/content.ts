@@ -67,7 +67,7 @@ export interface Partner {
 }
 export type PartnerId = 'nextpawa' | 'verispon' | 'tapmonie' | 'pressmonie';
 export const PARTNERS: Record<PartnerId, Partner> = {
-  nextpawa: { name: 'NextPawa', tagline: 'Electricity units & data — instant, with receipt', url: '', ref: '', color: '#f2a21b' },
+  nextpawa: { name: 'NextPawa', tagline: 'Electricity units & data — instant, with receipt', url: 'https://nextpawa.com/', ref: '', color: '#f2a21b' },
   verispon: { name: 'Verispon', tagline: 'Escrow: pay safe, release when e land', url: '', ref: '', color: '#2f9e5a' },
   tapmonie: { name: 'Tapmonie', tagline: 'Coming to your street soon', url: '', ref: '', color: '#5a6cf0' },
   pressmonie: { name: 'Pressmonie', tagline: 'Coming to your street soon', url: '', ref: '', color: '#d04a7a' },
