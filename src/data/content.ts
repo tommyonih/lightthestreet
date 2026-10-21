@@ -1,5 +1,5 @@
 /* All game content is data-driven: add hairstyles, outfits, neighbours, hustles or shop items here. */
-import type { GameState } from '../core/types';
+import type { GameState, StreetType } from '../core/types';
 
 export interface Outfit { id: string; n: string; c1: string; c2: string; pat: 'tri' | 'dots' | 'stripes' | 'plain' }
 export interface Trait { id: string; n: string; d: string }
@@ -122,11 +122,25 @@ export const TRAITS: Trait[] = [
 ];
 
 export const BGS: Background[] = [
-  { id: 'hustler', n: 'Street Hustler', d: 'Modest room, ₦3,000, small gen (rough). 12u.', cash: 3000, units: 12, gen: 1, genCond: 55, fuel: 3 },
-  { id: 'faceme', n: 'Face-Me-I-Face-You', d: 'Cheap room, ₦2,500, tight-knit compound. 10u.', cash: 2500, units: 10, gen: 0, genCond: 0, fuel: 0, relBonus: 8 },
-  { id: 'business', n: 'Small Business Owner', d: 'Shop owner. ₦5,000, 20u — but stock needs power.', cash: 5000, units: 20, gen: 0, genCond: 0, fuel: 0 },
-  { id: 'student', n: 'Student', d: '₦2,000, 8u. Laptop must stay alive for exams.', cash: 2000, units: 8, gen: 0, genCond: 0, fuel: 0 },
-  { id: 'estate', n: 'Estate Boy/Girl', d: 'Comfortable crib: ₦9,000, 35u — but bills dey.', cash: 9000, units: 35, gen: 0, genCond: 0, fuel: 0 },
+  { id: 'hustler', n: 'Street Hustler', d: 'Modest room, ₦15,000, small gen (rough). 12u.', cash: 15000, units: 12, gen: 1, genCond: 55, fuel: 3 },
+  { id: 'faceme', n: 'Face-Me-I-Face-You', d: 'Cheap room, ₦15,000, tight-knit compound. 10u.', cash: 15000, units: 10, gen: 0, genCond: 0, fuel: 0, relBonus: 8 },
+  { id: 'business', n: 'Small Business Owner', d: 'Shop owner. ₦15,000, 20u — but stock needs power.', cash: 15000, units: 20, gen: 0, genCond: 0, fuel: 0 },
+  { id: 'student', n: 'Student', d: '₦15,000, 8u. Laptop must stay alive for exams.', cash: 15000, units: 8, gen: 0, genCond: 0, fuel: 0 },
+  { id: 'estate', n: 'Estate Boy/Girl', d: 'Comfortable crib: ₦15,000, 35u — but bills dey.', cash: 15000, units: 35, gen: 0, genCond: 0, fuel: 0 },
+];
+
+/** What kind of street you live on — decides how often NEPA takes light. */
+export interface StreetTypeDef {
+  id: StreetType;
+  n: string;
+  d: string;
+}
+export const STREET_TYPES: StreetTypeDef[] = [
+  { id: 'regular', n: 'Regular Street', d: 'Normal NEPA wahala — light come, light go. Nobody dey special.' },
+  { id: 'nepo', n: 'Nepo Baby Street', d: 'Money talk. Light almost always dey — this one na Lekki level. NEPA no fit touch here.' },
+  { id: 'lapo', n: 'Lapo Baby Street', d: 'Family money for background. Light dey constant, outages short. You stay near the distribution station.' },
+  { id: 'midnight', n: 'Midnight Street', d: 'Light only come night time. Day time na darkness — you go need generator for day hustle.' },
+  { id: 'daytime', n: 'Daytime Street', d: 'Light come during the day. Night time na generator time — no light for sleep.' },
 ];
 
 export const NPCDEF: NpcDef[] = [

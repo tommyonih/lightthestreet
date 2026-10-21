@@ -61,11 +61,59 @@ export function restoreFX(flash: boolean): void {
 
 export function flipGrid(): void {
   const mods = supplyMods();
+  const h = hourNow();
+
+  // ── Nepo Baby street: light almost always on, rare brief outages ────
+  if (G.streetType === 'nepo') {
+    if (G.gridOn && chance(.003)) {
+      G.gridOn = false; blackoutFX();
+      G.nextFlip = T() + rnd(5, 15);
+    } else if (!G.gridOn) {
+      G.gridOn = true; restoreFX(false);
+      G.nextFlip = T() + rnd(240, 480);
+    } else {
+      G.nextFlip = T() + 60;
+    }
+    return;
+  }
+  // ── Lapo Baby / near distribution station: constant light, short outages ─
+  if (G.streetType === 'lapo' || G.streetType === 'station') {
+    if (G.gridOn) {
+      G.gridOn = false; blackoutFX();
+      G.nextFlip = T() + rnd(GRID.offMin, GRID.offMax) * mods.off * 0.35;
+    } else {
+      G.gridOn = true; restoreFX(false);
+      G.nextFlip = T() + rnd(GRID.onMin, GRID.onMax) * mods.on * 2;
+    }
+    return;
+  }
+  // ── Midnight street: light only at night (6PM–6AM) ─────────────────
+  if (G.streetType === 'midnight') {
+    const shouldBeOn = !(h >= 6 && h < 18);
+    if (G.gridOn !== shouldBeOn) {
+      if (shouldBeOn) { G.gridOn = true; restoreFX(false); }
+      else { G.gridOn = false; blackoutFX(); }
+    }
+    G.nextFlip = T() + 60;
+    return;
+  }
+  // ── Daytime street: light only during the day (6AM–6PM) ─────────────
+  if (G.streetType === 'daytime') {
+    const shouldBeOn = h >= 6 && h < 18;
+    if (G.gridOn !== shouldBeOn) {
+      if (shouldBeOn) { G.gridOn = true; restoreFX(false); }
+      else { G.gridOn = false; blackoutFX(); }
+    }
+    G.nextFlip = T() + 60;
+    return;
+  }
+
+  // ── Regular street: normal NEPA wahala ──────────────────────────────
   if (G.gridOn) {
     G.gridOn = false; blackoutFX();
     let dur = rnd(GRID.offMin, GRID.offMax) * mods.off;
     if (G.weather === 'storm') dur *= 1.5; else if (G.weather === 'rain') dur *= 1.2;
-    if (chance(GRID.blinkP)) dur = rnd(6, 14); // quick blink
+    if (chance(GRID.blinkP)) dur = rnd(6, 14);
     G.nextFlip = T() + dur;
   } else {
     G.gridOn = true;

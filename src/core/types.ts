@@ -1,6 +1,7 @@
 import type { MemKind, PlaceId } from '../data/content';
 
 export type Weather = 'sunny' | 'hot' | 'rain' | 'storm';
+export type StreetType = 'regular' | 'nepo' | 'lapo' | 'midnight' | 'daytime' | 'station';
 
 export interface NpcState {
   id: string;
@@ -201,6 +202,9 @@ export interface GameState {
   waypoint: Waypoint | null;
   week: WeekState;
   weekHistory: { n: number; done: number; total: number }[];
+  /** What kind of street you live on — decides how often NEPA takes light. */
+  streetType: StreetType;
+  streetName: string;
   resText?: string;
 }
 

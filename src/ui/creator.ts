@@ -1,12 +1,13 @@
 /* Character creator: look, background and traits. */
 import { G } from '../core/state';
 import { $, clamp } from '../core/util';
-import { BGS, HAIRS, OUTFITS, SKINS, TRAITS } from '../data/content';
+import { BGS, HAIRS, OUTFITS, SKINS, STREET_TYPES, TRAITS } from '../data/content';
+import type { StreetType } from '../core/types';
 import { drawPreview } from '../render/preview';
 import { toast } from './toast';
 import { wants3D } from './view';
 
-export const C = { name: '', gender: 0, skin: 2, hair: 0, outfit: 0, bg: 'hustler', traits: [] as string[] };
+export const C = { name: '', gender: 0, skin: 2, hair: 0, outfit: 0, bg: 'hustler', streetType: 'regular' as StreetType, traits: [] as string[] };
 
 let stop3d: (() => void) | null = null, loading3d = false;
 /** The 2D drawing always updates; in 3D mode a turntable of the real 3D character takes its place. */
@@ -45,6 +46,7 @@ export function buildCreator(): void {
   options('#optHair', HAIRS, (d, h, i) => { d.className = 'chip'; d.textContent = h.n; return C.hair === i; }, (_, i) => { C.hair = i; look(); });
   options('#optOutfit', OUTFITS, (d, o, i) => { d.className = 'chip'; d.textContent = o.n; return C.outfit === i; }, (_, i) => { C.outfit = i; look(); });
   options('#optBg', BGS, (d, b) => { d.className = 'chip'; d.textContent = b.n; d.title = b.d; return C.bg === b.id; }, (b) => { C.bg = b.id; buildCreator(); });
+  options('#optStreet', STREET_TYPES, (d, s) => { d.className = 'chip'; d.textContent = s.n; d.title = s.d; return C.streetType === s.id; }, (s) => { C.streetType = s.id; buildCreator(); });
   options('#optTraits', TRAITS, (d, t) => { d.className = 'chip'; d.textContent = t.n; d.title = t.d; return C.traits.includes(t.id); }, (t) => {
     if (C.traits.includes(t.id)) C.traits = C.traits.filter((x) => x !== t.id);
     else if (C.traits.length < 2) C.traits.push(t.id);
@@ -57,8 +59,10 @@ export function buildCreator(): void {
 export function applyCreator(): void {
   G.name = (C.name || 'Resident').trim() || 'Resident';
   G.gender = C.gender; G.skin = C.skin; G.hair = C.hair; G.outfit = C.outfit;
-  G.traits = [...C.traits]; G.bg = C.bg;
+  G.traits = [...C.traits]; G.bg = C.bg; G.streetType = C.streetType;
   const b = BGS.find((x) => x.id === C.bg)!;
+  const st = STREET_TYPES.find((x) => x.id === C.streetType)!;
+  G.streetName = st.n;
   G.cash = b.cash; G.meterUnits = b.units; G.gen = b.gen; G.genCond = b.genCond; G.fuel = b.fuel;
   if (b.relBonus) G.npcs.forEach((n) => { n.rel = clamp(n.rel + b.relBonus!, 0, 100); });
   if (b.gen === 0) G.genOn = false;

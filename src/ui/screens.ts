@@ -3,7 +3,7 @@ import { setAmbience } from '../core/audio';
 import { resize } from '../render/street';
 import { updHUD } from './hud';
 
-export type ScreenId = 'scr-welcome' | 'scr-age' | 'scr-rules' | 'scr-create' | 'scr-game' | 'scr-results' | 'scr-blank';
+export type ScreenId = 'scr-welcome' | 'scr-age' | 'scr-rules' | 'scr-create' | 'scr-game' | 'scr-results' | 'scr-blank' | 'scr-room';
 
 export function show(id: ScreenId): void {
   document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));

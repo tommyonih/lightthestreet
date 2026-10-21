@@ -46,7 +46,7 @@ export function freshState(): GameState {
     day: 1, minute: 7 * 60, weather: 'sunny', temp: 31,
     gridOn: true, nextFlip: 1440 + 7 * 60 + 18, flashUntil: 0, lastEvent: 0,
     meterUnits: 12, meterNo: '0452' + String(Math.floor(10000000 + Math.random() * 89999999)),
-    cash: 3000, fuel: 3, gen: 1, genCond: 55, genOn: false,
+    cash: 15000, fuel: 3, gen: 1, genCond: 55, genOn: false,
     phone: 68, dataMB: STARTING_DATA, lamp: 0, powerbank: 0, pbankCharges: 0, solar: 0, inverter: 0, invCharge: 50,
     fridgeEff: 0, fanRecharge: 0, fanBat: 0,
     fanOn: true, tvOn: true, fridgeOn: true,
@@ -60,6 +60,7 @@ export function freshState(): GameState {
     policies: {}, meetings: [], nextMeetingDay: FIRST_MEETING_DAY,
     job: null, loc: 'street', trip: null, visited: ['street'], unlocked: unlockedBy(1), waypoint: null, orders: [],
     week: emptyWeek(1, 1, 3000, stats), weekHistory: [],
+    streetType: 'regular', streetName: 'Your Street',
   };
 }
 

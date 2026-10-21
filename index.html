@@ -115,6 +115,8 @@
       </div>
       <label class="lbl">Pick your background (starting situation)</label>
       <div class="opts" id="optBg"></div>
+      <label class="lbl">Pick your street (how NEPA treats you)</label>
+      <div class="opts" id="optStreet"></div>
       <label class="lbl">Pick 1–2 personality traits</label>
       <div class="opts" id="optTraits"></div>
       <button class="btn primary" id="btnEnter">Enter the Street</button>
@@ -131,9 +133,10 @@
           <span><span id="pillTime">Day 1 • 07:00</span> · <span id="pillWeather">☀️ 32°C</span></span>
         </div>
         <div class="cash" id="pillCash">₦5,000</div>
-        <button class="iconbtn viewbtn" id="btnView" aria-label="Switch street view">2D</button>
-        <button class="iconbtn" id="btnSoundG" aria-label="Sound"></button>
-        <button class="iconbtn" id="btnEnd" aria-label="End session"><i data-icon="flag" data-size="18"></i></button>
+    <button class="iconbtn viewbtn" id="btnView" aria-label="Switch street view">2D</button>
+    <button class="iconbtn" id="btnSoundG" aria-label="Sound"></button>
+    <button class="iconbtn" id="btnEnterRoom" aria-label="Enter your room">🏠</button>
+    <button class="iconbtn" id="btnEnd" aria-label="End session"><i data-icon="flag" data-size="18"></i></button>
       </div>
       <div class="tiles">
         <div class="tile" id="pillGrid"></div>
@@ -185,6 +188,29 @@
     </nav>
   </div>
 
+  <!-- ROOM -->
+  <div class="screen" id="scr-room">
+    <div class="card wide">
+      <header class="roomHead">
+        <h2>🏠 Your Room</h2>
+        <div class="roomStats">
+          <span>₦<span id="roomCash">0</span></span>
+          <span>♥<span id="roomHappiness">0</span></span>
+          <span>⚡<span id="roomPower">OFF</span></span>
+        </div>
+      </header>
+      <div class="roomGrid">
+        <button class="btn primary roomBtn" id="roomSleep"><i data-icon="moon" data-size="20"></i><span>Sleep</span></button>
+        <button class="btn roomBtn" id="roomEat"><i data-icon="food" data-size="20"></i><span>Eat</span></button>
+        <button class="btn roomBtn" id="roomTv"><i data-icon="tv" data-size="20"></i><span>Watch TV</span></button>
+        <button class="btn roomBtn" id="roomCharge"><i data-icon="zap" data-size="20"></i><span>Charge Phone</span></button>
+        <button class="btn roomBtn" id="roomRest"><i data-icon="user" data-size="20"></i><span>Rest</span></button>
+        <button class="btn roomBtn" id="roomLeave"><i data-icon="door" data-size="20"></i><span>Go Outside</span></button>
+      </div>
+      <div id="roomMsg" class="roomMsg"></div>
+    </div>
+  </div>
+
   <!-- RESULTS -->
   <div class="screen" id="scr-results">
     <div class="card">
@@ -200,8 +226,6 @@
       <p class="note">Statistics are from your actual session. All figures virtual &amp; for gist only.</p>
     </div>
   </div>
-
-  <!-- EVENT MODAL -->
   <div id="modal"><div class="card" id="modalCard">
     <div class="grab"></div>
     <h3 class="evTitle" id="evTitle"></h3>
