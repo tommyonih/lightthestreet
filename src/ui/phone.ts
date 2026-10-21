@@ -97,8 +97,12 @@ const views: Record<Tab, () => [string, string]> = {
     h += `<div class="row">${DATA_BUNDLES.map((b, i) => `<button class="btn small" data-data="${i}" ${G.cash < b.p ? 'disabled' : ''}>${b.n}<div class="evSub">₦${fmt(b.p)}</div></button>`).join('')}</div>`;
     h += `<label class="lbl">Load promo token (once/day)</label>
         <input class="txt" id="tokIn" maxlength="14" placeholder="e.g. 5812-4470-9921">
-        <button class="btn small" id="tokGo">Load token</button>
-        <p class="note">In the game, everything here na game money — no real payment.${partnerLink('nextpawa', 'NextPawa') ? `<br>For your real meter and real data: ${partnerLink('nextpawa', 'NextPawa')} — separate &amp; optional.` : ''}</p>`;
+        <button class="btn small" id="tokGo">Load token</button>`;
+    const realPurchases = [
+      partnerLink('nextpawa', 'electricity', 'electricity'),
+      partnerLink('nextpawa', 'data', 'data'),
+    ].filter(Boolean).join(' · ');
+    h += `<p class="note">In the game, everything here na game money — no real payment.${realPurchases ? `<br>For real-life purchases: ${realPurchases} — separate &amp; optional.` : ''}</p>`;
     return ['⚡ NextPawa', h];
   },
   power() {

@@ -2,6 +2,7 @@
    the cloud copy is pushed a few seconds after saves and pulled at sign-in. The furthest-along save wins. */
 import { G, T, gameTime, hasGame, loadSave, migrate, onSave, storeSave } from '../core/state';
 import type { Stats } from '../core/types';
+import type { User } from '@supabase/supabase-js';
 import { onWeekEnd } from '../game/challenges';
 import { renderShareCard, type CardKind } from '../render/shareCard';
 import { currentUser, initAuth, onAuth } from './auth';
@@ -13,6 +14,25 @@ const CARD_URL_TTL_S = 60 * 60;
 
 let timer = 0;
 let syncedName = '';
+
+async function ensureProfile(u: User): Promise<void> {
+  const s = await sb();
+  const { data, error } = await s.from('profiles').select('id').eq('id', u.id).maybeSingle();
+  if (error) { console.warn('profile lookup failed:', error.message); return; }
+  if (data) return;
+
+  const meta = u.user_metadata ?? {};
+  const metaString = (key: string): string => typeof meta[key] === 'string' ? meta[key] : '';
+  const displayName = (metaString('display_name') || metaString('full_name') || metaString('name') || u.email?.split('@')[0] || 'Resident').slice(0, 40);
+  const { error: insertError } = await s.from('profiles').insert({
+    id: u.id,
+    display_name: displayName,
+    full_name: metaString('full_name') || metaString('name') || displayName,
+    email: u.email ?? '',
+    phone: metaString('phone'),
+  });
+  if (insertError) console.warn('profile creation failed:', insertError.message);
+}
 
 async function push(): Promise<void> {
   timer = 0;
@@ -92,6 +112,9 @@ export function initCloud(onPulled: () => void): void {
   onSave(schedulePush);
   onWeekEnd((week) => { void fileReport({ kind: 'week', week }); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
-  onAuth((u) => { if (u) void pullSave().then((changed) => { if (changed) onPulled(); }); });
+  onAuth((u) => {
+    if (u) void ensureProfile(u).then(() => pullSave()).then((changed) => { if (changed) onPulled(); })
+      .catch((e: unknown) => console.warn('account setup failed:', e));
+  });
   initAuth().catch((e) => console.warn('auth unavailable:', e));
 }

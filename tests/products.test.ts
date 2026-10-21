@@ -49,7 +49,10 @@ describe('NextPawa', () => {
   });
 
   it('real links only appear once a URL is set, and carry the referral code', () => {
-    expect(partnerLink('nextpawa', 'NextPawa')).toBe('');
+    expect(partnerLink('verispon', 'Verispon')).toBe(''); // no URL yet → no link
+    expect(partnerLink('nextpawa', 'NextPawa', 'electricity')).toContain('https://nextpawa.com/electricity');
+    expect(partnerLink('nextpawa', 'NextPawa', 'data')).toContain('https://nextpawa.com/data');
+    expect(partnerLink('nextpawa', 'NextPawa')).toContain('https://nextpawa.com/');
     const saved = { ...PARTNERS.nextpawa };
     Object.assign(PARTNERS.nextpawa, { url: 'https://example.test/buy', ref: 'STREET1' });
     try { expect(partnerLink('nextpawa', 'NextPawa')).toContain('https://example.test/buy?ref=STREET1'); }

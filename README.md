@@ -11,6 +11,8 @@ npm test           # headless balance play-throughs + regression tests
 npm run build      # typecheck + production build into dist/
 ```
 
+The parent NextPawa app runs `npm run game:build` before its Nuxt build. That command installs the game's locked dependencies, builds it, and copies the output into `static/game/app/`. The parent app owns `/game/` and embeds the playable game from `/game/app/`.
+
 Project plan and roadmap: [docs/PLAN.md](docs/PLAN.md). Design rules: [docs/DESIGN.md](docs/DESIGN.md). Instructions for Claude Code: [CLAUDE.md](CLAUDE.md).
 
 ## Layout

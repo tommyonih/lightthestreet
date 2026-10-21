@@ -21,14 +21,18 @@ export function addCash(n: number, why: string): void {
 export const VENDOR_DISCOUNT = 20;
 
 /** A real, optional link to one of our products (with the referral code), or '' if its URL isn't set yet. */
-export function partnerLink(id: PartnerId, text: string): string {
-  const p = PARTNERS[id]; if (!p.url) return '';
-  const url = p.ref ? `${p.url}${p.url.includes('?') ? '&' : '?'}ref=${encodeURIComponent(p.ref)}` : p.url;
+export function partnerLink(id: PartnerId, text: string, destination?: 'electricity' | 'data'): string {
+  const p = PARTNERS[id];
+  const baseUrl = destination === 'electricity' ? p.electricityUrl
+    : destination === 'data' ? p.dataUrl
+      : p.url;
+  if (!baseUrl) return '';
+  const url = p.ref ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}ref=${encodeURIComponent(p.ref)}` : baseUrl;
   return `<a class="realLink" href="${url}" target="_blank" rel="noopener">${text} ↗</a>`;
 }
 /** The line under every in-game NextPawa purchase: the real thing, separate and optional. */
 const realNextPawa = (): string => {
-  const a = partnerLink('nextpawa', 'Recharge for real on NextPawa');
+  const a = partnerLink('nextpawa', 'Buy electricity on NextPawa', 'electricity');
   return a ? `<br><span style="font-size:12px;color:var(--dim)">Real life too? ${a} — separate &amp; optional, not part of the game.</span>` : '';
 };
 
