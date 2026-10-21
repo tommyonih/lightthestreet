@@ -19,7 +19,7 @@ import { closePhone, navTo, openPhone, renderPhone } from './ui/phone';
 import { hydrateIcons } from './ui/icons';
 import { initAppShell } from './ui/shell';
 import { copySummary, endSession } from './ui/results';
-import { show, type ScreenId } from './ui/screens';
+import { show, showBlank, type ScreenId } from './ui/screens';
 import { toast } from './ui/toast';
 import { initShare, openShareSheet } from './ui/share';
 import { initAccountUI } from './ui/account';
@@ -87,7 +87,6 @@ function wire(): void {
 
 // boot
 hydrateIcons();
-if (loadSave()) $('#btnContinue').style.display = 'block';
 wire();
 const street = $<HTMLCanvasElement>('#street');
 initRenderer(street);
@@ -102,3 +101,12 @@ initAccountUI();
 window.addEventListener('beforeunload', () => { if (hasGame() && G.intro >= INTRO_DONE) save(); });
 setInterval(tick, TICK_MS);
 setInterval(introStep, INTRO_POLL_MS);
+
+const path = window.location.pathname;
+if (path === '/game') {
+  const s = loadSave();
+  if (s) { setG(s); startGame(false); toast('💾 Save loaded. Welcome back, ' + esc(G.name) + '!', 'sys'); }
+  else { startGame(true); }
+} else {
+  showBlank();
+}
