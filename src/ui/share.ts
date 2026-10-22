@@ -15,14 +15,14 @@ function download(canvas: HTMLCanvasElement, name: string): void {
   const a = document.createElement('a');
   a.href = canvas.toDataURL('image/png'); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
-  toast('🖼️ Card saved! Go post am for your people.', 'sys');
+  toast('🖼️ Card saved! Share it with your friends.', 'sys');
 }
 
 async function share(canvas: HTMLCanvasElement, name: string): Promise<void> {
   const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
   const file = blob && new File([blob], name, { type: 'image/png' });
   if (file && navigator.canShare?.({ files: [file] })) {
-    try { await navigator.share({ files: [file], text: 'My street don dey test me 😂 Play free: https://lightupyourstreet.com #LightUpYourStreet' }); return; }
+    try { await navigator.share({ files: [file], text: 'My Lagos street story 😂 Play free: https://nextpawa.com/game #LightUpYourStreet' }); return; }
     catch { return; } // user closed the share sheet
   }
   download(canvas, name);

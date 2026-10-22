@@ -35,21 +35,21 @@ export function startFundDrive(): void {
   G.owing = G.npcs.filter((n) => n.owing).map((n) => n.id);
   const paidAll = G.npcs.filter((n) => n.paid).length;
   openModal('🏘️ Save the Street!',
-    `Chairman Dele: <i>"Oya everybody! Transformer need repairs & streetlight don die. Fund goal: <b>₦${fmt(G.fundGoal)}</b>. Each house: ₦${fmt(SHARE)}."</i><br><br>${payers} house(s) drop money this round. Fund: <b>₦${fmt(G.fund)}</b>. ${paidAll}/${G.npcs.length} neighbours don pay. <b>${G.owing.length} house(s) never pay.</b>${G.youPaid ? '<br><span style="color:var(--green)">You don pay your own share ✓</span>' : ''}`, [
-      { t: `Pay your share — ₦${fmt(SHARE)}`, dis: G.cash < SHARE || G.youPaid, sub: G.youPaid ? 'Already paid' : hasTrait('chairman') ? 'Chairman trait: counts double' : '', fn: () => {
+    `Chairman Dele: <i>"Everyone! The transformer needs repairs and the streetlight is dead. Fund goal: <b>₦${fmt(G.fundGoal)}</b>. Each house: ₦${fmt(SHARE)}."</i><br><br>${payers} house(s) paid this round. Fund: <b>₦${fmt(G.fund)}</b>. ${paidAll}/${G.npcs.length} neighbours have paid. <b>${G.owing.length} house(s) haven’t.</b>${G.youPaid ? '<br><span style="color:var(--green)">You’ve paid your share ✓</span>' : ''}`, [
+      { t: `Pay your share: ₦${fmt(SHARE)}`, dis: G.cash < SHARE || G.youPaid, sub: G.youPaid ? 'Already paid' : hasTrait('chairman') ? 'Chairman trait: counts double' : '', fn: () => {
         const eff = payOwnShare();
         toast(`🏘️ ₦${fmt(eff)} counted! Fund: ₦${fmt(G.fund + eff)} / ₦${fmt(G.fundGoal)}`, 'sys');
         addFund(eff); save(); updHUD();
       } },
-      { t: 'Pay extra — ₦2,000 (big man move)', dis: G.cash < 2000, fn: () => {
+      { t: 'Pay extra: ₦2,000', dis: G.cash < 2000, fn: () => {
         const eff = hasTrait('chairman') ? 3000 : 2000; G.youPaid = true;
         addCash(-2000, 'Street fund (extra)'); trust(12); sfx.cheer();
-        checkObj('fund'); toast(`🎖️ Extra dropped! ₦${fmt(eff)} counted. Street dey hail you!`, 'sys');
+        checkObj('fund'); toast(`🎖️ Extra paid! ₦${fmt(eff)} counted. The street is cheering you!`, 'sys');
         addFund(eff); save(); updHUD();
       } },
-      { t: G.youPaid ? 'Close' : '"I go pay later" (−trust)', fn: () => {
+      { t: G.youPaid ? 'Close' : '"I’ll pay later" (−trust)', fn: () => {
         if (G.youPaid) return; trust(-10);
-        toast('😬 Aunty Caro side-eye you. "I go pay later" — who never hear that before?', 'bad'); save(); updHUD();
+        toast('😬 Aunty Caro gives you a look. "I’ll pay later." Who hasn’t heard that before?', 'bad'); save(); updHUD();
       } },
     ]);
   if (G.fund >= G.fundGoal && !G.streetlightFixed) { closeModal(); completeFund(); }
@@ -58,7 +58,7 @@ export function startFundDrive(): void {
 export function completeFund(): void {
   if (G.streetlightFixed) return;
   G.streetlightFixed = true; G.owing = []; trust(20); mood(12); sfx.cheer();
-  openModal('💡 LIGHT UP THE STREET!', 'The fund complete! Electrician fix the streetlight and service the transformer.<br><br>🌟 Night never dark again for this street. <b>Achievement unlocked: Chairman Material!</b>',
-    [{ t: 'Celebrate with the street! 🎉', fn: () => { toast('🎉 Whole compound dey jubilate! Chairman Dele dey hail you by name!', 'sys'); } }]);
+  openModal('💡 THE STREET IS LIT!', 'The fund is complete! The electrician fixed the streetlight and serviced the transformer.<br><br>🌟 Nights on this street are bright again. <b>Achievement unlocked: Chairman Material!</b>',
+    [{ t: 'Celebrate with the street! 🎉', fn: () => { toast('🎉 The whole compound is celebrating! Chairman Dele is cheering your name!', 'sys'); } }]);
   checkAch(); save();
 }

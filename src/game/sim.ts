@@ -7,6 +7,7 @@ import { modalOpen } from '../ui/modal';
 import { toast } from '../ui/toast';
 import { updHUD } from '../ui/hud';
 import { addCash, loadToken } from './economy';
+import { debtNewDay } from './birth';
 import { rollEvent } from './events';
 import { DRAIN_GEN, genCapacity, loadLevel, stopGen } from './generator';
 import { cooling, fun, hasTrait, hourNow, isNight, mood, powered, rel, streetLit, sunUp, trust } from './helpers';
@@ -35,14 +36,14 @@ export function updateWeather(): void {
 
 export function blackoutFX(): void {
   G.stats.blackouts++; G.stats.noiseThisBlackout = 0;
-  sfx.off(); toast('⚡ <b>NEPA don take light!</b> Everywhere don dark…', 'bad');
-  const shouts = ['Ah-ah! NEPA don take light?!', 'Who off the light?!', 'Omo!! Again?!', 'Up NEPA… wait, reverse!'];
+  sfx.off(); toast('⚡ <b>Power cut!</b> Everything has gone dark…', 'bad');
+  const shouts = ['Not again!', 'Who turned off the light?!', 'Seriously? Again?!', 'Up NEPA… wait, never mind!'];
   setTimeout(() => toast('🗣️ ' + pick(NPCDEF).name + ': “' + pick(shouts) + '”', 'npc'), 1200);
-  setTimeout(() => { if (G && !G.gridOn) toast('🗣️ ' + pick(NPCDEF).name + ': “' + pick(['My fan just stop! Heat o!', 'Who get extension?!', 'Make we shout together, e fit hear us!']) + '”', 'npc'); }, 4200);
+  setTimeout(() => { if (G && !G.gridOn) toast('🗣️ ' + pick(NPCDEF).name + ': “' + pick(['My fan just stopped! This heat!', 'Who has an extension cable?!', 'Let’s all shout, maybe they’ll hear us!']) + '”', 'npc'); }, 4200);
   mood(hasTrait('nepafight') ? -3 : -6);
   if (G.tvOn && G.minute > 17 * 60 && G.minute < 23 * 60) fun(-6);
   if (!atHome() && G.intro >= 99 && (G.gen > 0 || G.fridgeOn)) {
-    setTimeout(() => toast(`🏃 And you dey ${G.trip ? 'road' : place(G.loc).n}! ${G.gen > 0 ? 'Gen no fit start itself.' : 'Your fridge dey suffer.'}`, 'bad'), 2600);
+    setTimeout(() => toast(`🏃 And you’re ${G.trip ? 'on the road' : 'at ' + place(G.loc).n}! ${G.gen > 0 ? 'Your generator can’t start itself.' : 'Your fridge is suffering.'}`, 'bad'), 2600);
   }
   checkObj('blackout');
 }
@@ -50,12 +51,12 @@ export function blackoutFX(): void {
 export function restoreFX(flash: boolean): void {
   G.stats.restores++;
   if (!flash) {
-    sfx.on(); toast('💡 <b>LIGHT DON COME!</b> “UP NEPA!!” the whole street shout!', 'sys');
+    sfx.on(); toast('💡 <b>POWER IS BACK!</b> “UP NEPA!” the whole street shouts!', 'sys');
     mood(hasTrait('party') ? 12 : 6); fun(4);
-    setTimeout(() => { if (G && G.gridOn) toast('🗣️ ' + pick(NPCDEF).name + ': “' + pick(['Up NEPA!! I talk am!', 'Charge your phone! Quick quick!', 'Oya, iron my cloth before e go again!']) + '”', 'npc'); }, 1500);
+    setTimeout(() => { if (G && G.gridOn) toast('🗣️ ' + pick(NPCDEF).name + ': “' + pick(['Up NEPA! I told you!', 'Charge your phones, quick!', 'Iron your clothes before it goes again!']) + '”', 'npc'); }, 1500);
     if (G.stats.noiseThisBlackout < 3) G.stats.quietBlackouts++;
   } else {
-    toast('💡 Light flash come… <b>then NEPA take am back!</b> “Up NE—” 😭 Everybody weak.', 'bad'); sfx.bad(); mood(-4);
+    toast('💡 The power flickered on… <b>and went off again!</b> “Up NE—” 😭', 'bad'); sfx.bad(); mood(-4);
   }
 }
 
@@ -135,19 +136,20 @@ export function applianceDrain(): number {
 
 export function meterEmpty(): void {
   G.meterUnits = 0; G.stats.noMeterFailDays = 0; G.week.c.meterZero = true; sfx.alarm();
-  toast('🔋 <b>Omo, meter don finish!</b> Your house don dark — even though street get light. Buy units!', 'bad');
-  if (chance(.5)) setTimeout(() => toast('🗣️ Aunty Caro: “Ehen! Who house just dark? Meter don finish for somebody!”', 'npc'), 2000);
+  toast('🔋 <b>Your meter ran out!</b> Your house is dark even though the street has power. Buy units on NextPawa.', 'bad');
+  if (chance(.5)) setTimeout(() => toast('🗣️ Aunty Caro: “Whose house just went dark? Someone’s meter ran out!”', 'npc'), 2000);
 }
 
 export function newDay(): void {
   G.day++; G.pbankCharges = G.powerbank > 0 ? 2 : G.pbankCharges;
   weekRollover();
   if (G.meterUnits > 0) G.stats.noMeterFailDays++;
-  if (G.bg === 'estate' && G.day % 7 === 0) { addCash(-1500, 'Estate weekly bills'); toast('🏘️ Estate dues collected: ₦1,500. Comfort dey cost.', 'sys'); }
+  if (G.bg === 'estate' && G.day % 7 === 0) { addCash(-1500, 'Estate weekly bills'); toast('🏘️ Estate dues collected: ₦1,500. Comfort costs money.', 'sys'); }
   if (G.flags.emekaUnits && chance(.35)) {
     G.meterUnits += G.flags.emekaUnits; G.flags.emekaUnits = 0; rel('broke', 5);
-    toast('🙏 Emeka knock: “Bros, see your 3 units. I no forget!” Miracle!', 'npc');
+    toast('🙏 Emeka knocks: “Here are your 3 units back. I didn’t forget!”', 'npc');
   }
+  debtNewDay();
   policiesNewDay();
   forgetFaded();
   checkAch();
@@ -161,19 +163,19 @@ export function setScreenGate(fn: () => boolean): void { screenGate = fn; }
 export function tick(): void {
   if (!G || modalOpen || !screenGate()) return;
   G.minute += STEP;
-  if (G.minute >= 1440) { G.minute -= 1440; newDay(); toast(`🌅 <b>Day ${G.day}</b> for ${esc(G.name)} street. Fresh hope, same NEPA.`, 'sys'); }
+  if (G.minute >= 1440) { G.minute -= 1440; newDay(); toast(`🌅 <b>Day ${G.day}</b> for ${esc(G.name)}. A new day.`, 'sys'); }
   // daily food from 06:00
   if (G.lastFoodDay < G.day && G.minute >= 360) {
     G.lastFoodDay = G.day;
-    if (G.cash >= 400) { addCash(-400, 'Daily food'); G.hunger = clamp(G.hunger - 30, 0, 100); toast('🍲 You cook small soup. Daily food: ₦400.', 'sys'); }
-    else { G.hunger = clamp(G.hunger + 15, 0, 100); mood(-8); toast('🥺 No money for proper food. Indomie & hope again.', 'bad'); }
+    if (G.cash >= 400) { addCash(-400, 'Daily food'); G.hunger = clamp(G.hunger - 30, 0, 100); toast('🍲 You cooked some soup. Daily food: ₦400.', 'sys'); }
+    else { G.hunger = clamp(G.hunger + 15, 0, 100); mood(-8); toast('🥺 No money for proper food. Noodles again.', 'bad'); }
   }
   // weather drift every ~3 game-hours
   if (chance(.02)) updateWeather();
   // pending token credit
   if (G.pendingCredit && T() >= G.pendingCredit.at) {
     const u = G.pendingCredit.units; G.pendingCredit = null; loadToken(u);
-    toast('⏳ Delayed token finally drop! Network finally remember you.', 'sys');
+    toast('⏳ The delayed token finally arrived.', 'sys');
   }
   // electricity engine (paused during the scripted intro)
   if (G.intro >= 99 && T() >= G.nextFlip) flipGrid();
@@ -183,11 +185,11 @@ export function tick(): void {
   // generator overload
   if (G.genOn && load > genCapacity()) {
     stopGen(true); G.genCond = clamp(G.genCond - 4, 5, 100); sfx.bad();
-    toast('⚠️ <b>Gen TRIP!</b> Small gen no fit carry everything. Off some appliances!', 'bad');
+    toast('⚠️ <b>Generator tripped!</b> A small generator can’t run everything. Turn some appliances off.', 'bad');
   }
   // meter consumption (changeover: gen carries the house while it runs)
   if (gridPow && !G.genOn) { G.meterUnits = Math.max(0, G.meterUnits - applianceDrain() * STEP); if (G.meterUnits <= 0) meterEmpty(); }
-  if (gridPow && G.meterUnits < 4 && G.meterUnits > 0 && chance(.01)) toast('🔋 Meter dey shout low credit — <b>' + G.meterUnits.toFixed(1) + 'u</b> remain!', 'bad');
+  if (gridPow && G.meterUnits < 4 && G.meterUnits > 0 && chance(.01)) toast('🔋 Low credit: only <b>' + G.meterUnits.toFixed(1) + ' units</b> left. Top up on NextPawa.', 'bad');
   // generator
   if (G.genOn) {
     const lateNight = G.minute >= 22 * 60 || G.minute < 6 * 60;
@@ -195,10 +197,10 @@ export function tick(): void {
     G.noise = clamp(G.noise + (G.gen === 2 ? 1.1 : 0.8) * (hasTrait('genking') ? 1.5 : 1), 0, 100);
     G.genCond = clamp(G.genCond - 0.15, 5, 100);
     G.week.c.genMin += STEP;
-    if (G.fuel <= 0) { G.fuel = 0; stopGen(true); toast('⛽ <b>Fuel don finish!</b> Gen cough, shake, and die. During important task again!', 'bad'); sfx.bad(); suggest('fuel'); }
+    if (G.fuel <= 0) { G.fuel = 0; stopGen(true); toast('⛽ <b>Out of fuel!</b> The generator coughed and died.', 'bad'); sfx.bad(); suggest('fuel'); }
     if (G.policies.genCurfew && lateNight && chance(.04)) {
       addCash(-Math.min(CURFEW_FINE, G.cash), 'Gen curfew fine'); trust(-3); mood(-2);
-      toast(`🔇 Curfew patrol catch your gen! <b>₦${CURFEW_FINE} fine</b>. "Rule na rule — you sef vote for meeting."`, 'bad'); sfx.bad();
+      toast(`🔇 The curfew patrol caught your generator! <b>₦${CURFEW_FINE} fine</b>. "Rules are rules."`, 'bad'); sfx.bad();
     }
     const complainP = lateNight ? .03 : G.policies.genCurfew ? .009 : .015; // daytime gen is tolerated once there's a curfew
     if (G.noise > 30 && chance(complainP)) {
@@ -206,7 +208,7 @@ export function tick(): void {
       G.stats.complaints++; G.stats.noiseThisBlackout++;
       const pen = hasTrait('quiet') ? 2 : 5;
       rel(n.id, -pen); mood(-3); remember(n.id, 'noise');
-      toast('🗣️ ' + n.name + ': <b>“Please, off that generator!”</b> Noise full the compound. (Rel −' + pen + ')', 'bad');
+      toast('🗣️ ' + n.name + ': <b>“Please, turn off that generator!”</b> The noise fills the compound. (Rel −' + pen + ')', 'bad');
       if (chance(.4)) G.noise = 15;
     }
   } else G.noise = clamp(G.noise - 0.5, 0, 100);
@@ -228,9 +230,9 @@ export function tick(): void {
   if (G.bg === 'business' && powered() && G.minute > 8 * 60 && G.minute < 21 * 60) G.cash += 4;
   // needs
   G.hunger = clamp(G.hunger + 0.14, 0, 100);
-  if (G.hunger > 85) { mood(-0.4); if (chance(.01)) toast('🍲 Hunger dey drag your shirt. Go eat!', 'bad'); }
-  if (isNight() && !cooling() && G.temp >= 30) { mood(-0.35); if (chance(.008)) toast('🥵 Night heat no gree sleep. Fan need light o.', 'bad'); }
-  if (isNight() && !powered() && !G.lamp && !streetLit()) { mood(-0.12); if (chance(.006)) toast('🌑 Thick darkness. Even your hand you no fit see. Rechargeable lamp for Shop…', 'bad'); }
+  if (G.hunger > 85) { mood(-0.4); if (chance(.01)) toast('🍲 You’re very hungry. Go and eat!', 'bad'); }
+  if (isNight() && !cooling() && G.temp >= 30) { mood(-0.35); if (chance(.008)) toast('🥵 Too hot to sleep. The fan needs power.', 'bad'); }
+  if (isNight() && !powered() && !G.lamp && !streetLit()) { mood(-0.12); if (chance(.006)) toast('🌑 Pitch dark. You can’t see your own hand. A rechargeable lamp from the Shop would help.', 'bad'); }
   if (G.tvOn && powered() && hourNow() > 17) fun(0.25); else fun(-0.12);
   if (G.fun < 25) mood(-0.15);
   // happiness drifts toward an equilibrium set by power, noise and community trust

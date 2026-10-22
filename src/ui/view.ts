@@ -3,6 +3,7 @@
 import { SET, hasGame, saveSettings } from '../core/state';
 import { $ } from '../core/util';
 import type { View3D } from '../render3d/scene';
+import { resize } from '../render/street';
 import { streetHit, talkingTo } from './interact';
 import { toast } from './toast';
 
@@ -19,6 +20,7 @@ function show(three: boolean): void {
   $('#street').classList.toggle('off', three); // the 2D loop skips frames while its canvas is off
   $('#street3d').classList.toggle('off', !three);
   document.body.classList.toggle('v3d', three); // the place card can fold away in 3D, where the place itself is drawn
+  if (!three) requestAnimationFrame(resize); // the 2D canvas may have been hidden at its last resize
   const b = $('#btnView'); b.textContent = three ? '3D' : '2D'; b.setAttribute('aria-label', three ? 'Switch to 2D street' : 'Switch to 3D street');
 }
 
@@ -35,12 +37,12 @@ export function applyView(): Promise<void> {
         onSlow: () => {
           if (SET.view !== 'auto') return; // they chose 3D on purpose; respect it
           SET.view = '2d'; saveSettings(); void applyView();
-          toast('📉 3D dey drag for this phone — we switch you to <b>2D Classic</b>. Tap 2D/3D for top to try again.', 'sys');
+          toast('📉 3D is slow on this device, so we switched you to <b>2D</b>. Tap the 2D/3D button to try again.', 'sys');
         },
       });
       show(true);
     })
-    .catch(() => { show(false); if (hasGame()) toast('🧱 3D street no fit load now — 2D Classic for now.', 'bad'); })
+    .catch(() => { show(false); if (hasGame()) toast('🧱 The 3D street couldn’t load. Using 2D for now.', 'bad'); })
     .finally(() => { loading = null; });
   return loading;
 }

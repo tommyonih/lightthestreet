@@ -25,7 +25,7 @@ export function endSession(): void {
     Happiness: <b>${Math.round(G.happiness)}%</b> • Trust: <b>${Math.round(G.trust)}%</b><br>
     Achievements: ${G.ach.length}/${ACH.length}`;
   $('#resStatus').textContent = status;
-  G.resText = `MY STREET EXPERIENCE — Light Up Your Street\n${s.blackouts} blackouts survived.\n${s.events} street events faced.\n₦${fmt(s.spent)} in virtual money spent.\n${owing} neighbour(s) still owing.\n${s.votesWon} street vote(s) won${G.policies.youChair ? ' — elected street chairman!' : ''}.\nStreet happiness: ${Math.round(G.happiness)}%.\nStatus: ${status.replace(/[^\x20-\x7E₦]/g, '').trim()}\nPlay free: https://lightupyourstreet.com`;
+  G.resText = `MY STREET EXPERIENCE — Light Up Your Street\n${s.blackouts} blackouts survived.\n${s.events} street events faced.\n₦${fmt(s.spent)} in virtual money spent.\n${owing} neighbour(s) still owing.\n${s.votesWon} street vote(s) won${G.policies.youChair ? ' — elected street chairman!' : ''}.\nStreet happiness: ${Math.round(G.happiness)}%.\nStatus: ${status.replace(/[^\x20-\x7E₦]/g, '').trim()}\nPlay free: https://nextpawa.com/game`;
   show('scr-results');
 }
 

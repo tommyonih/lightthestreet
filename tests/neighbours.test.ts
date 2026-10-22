@@ -48,7 +48,7 @@ describe('schedules', () => {
 
   it('a daytime blackout sends Tunde out hunting for hotspot', () => {
     newGame(); at(2, 10); G.gridOn = false;
-    expect(whereabouts('remote')).toEqual({ at: 'porch', act: 'Hunting for hotspot! 📶' });
+    expect(whereabouts('remote')).toEqual({ at: 'porch', act: 'Looking for a hotspot! 📶' });
   });
 
   it('the fixed streetlight brings people out in the evening', () => {

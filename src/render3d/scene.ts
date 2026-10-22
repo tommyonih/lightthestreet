@@ -156,7 +156,9 @@ export function start(canvas: HTMLCanvasElement, hooks: Hooks, tier: Tier = pick
     const target = followX(focusX);
     camX = SET.motion ? camX + (target - camX) * Math.min(1, dt * 2.5) : target;
     // zoomed out shows roofs, sky and about three houses; zoomed in is a porch-level view
-    const z = Math.min(1, zoom + (SET.motion ? push : 0)), dist = 21 - z * 9, height = 6.4 - z * 2.4;
+    // narrow (portrait) screens pull back so a phone held upright still sees more than one house
+    const narrow = Math.min(1.9, Math.max(1, 1.6 / camera.aspect));
+    const z = Math.min(1, zoom + (SET.motion ? push : 0)), dist = (21 - z * 9) * narrow, height = (6.4 - z * 2.4) * (1 + (narrow - 1) * .55);
     const sx = SET.motion ? (Math.random() - .5) * kick : 0, sy = SET.motion ? (Math.random() - .5) * kick : 0;
     camera.position.set(camX + sx, height + sy, Z.outside + dist);
     camera.lookAt(camX + sx * .5, 2.9 - z * .9, Z.porch);

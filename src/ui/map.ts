@@ -55,11 +55,11 @@ function svgMap(mini = false): string {
 }
 
 /** One place row in the Map app: status, who's there, and how to get there. */
-function placeRow(id: PlaceId): string {
+export function placeRow(id: PlaceId): string {
   const p = place(id), ppl = peopleAt(id).map((n) => npcDef(n).name);
   const status = `<span style="color:${isOpen(id) ? 'var(--green)' : 'var(--dim)'}">${openLabel(id)}</span>`;
   let go: string;
-  if (G.loc === id && !G.trip) go = `<div class="okbox" style="margin:6px 0 0">📍 You dey here</div>`;
+  if (G.loc === id && !G.trip) go = `<div class="okbox" style="margin:6px 0 0">📍 You’re here</div>`;
   else if (G.trip?.to === id) go = `<div class="okbox" style="margin:6px 0 0">🚶 On your way…</div>`;
   else {
     const w = cantTravel(id, 'walk'), o = cantTravel(id, 'okada');
@@ -70,17 +70,17 @@ function placeRow(id: PlaceId): string {
   const pinned = G.waypoint === id;
   const pin = G.loc === id && !G.trip ? '' : `<button class="pinBtn${pinned ? ' on' : ''}" data-pin="${id}" aria-label="${pinned ? 'Clear waypoint' : 'Set waypoint'}">📌</button>`;
   return `<div class="placeRow" id="pr-${id}"><div class="stat" style="border:0;padding-bottom:2px"><span><b>${p.emoji} ${p.n}</b> ${pin}</span><span style="font-size:12px">${status}</span></div>
-    <div style="font-size:12px;color:var(--dim);padding:0 4px">${p.blurb}${ppl.length ? `<br>👥 ${ppl.join(', ')} dey here now` : ''}</div>${go}</div>`;
+    <div style="font-size:12px;color:var(--dim);padding:0 4px">${p.blurb}${ppl.length ? `<br>👥 ${ppl.join(', ')} ${ppl.length === 1 ? 'is' : 'are'} here now` : ''}</div>${go}</div>`;
 }
 
 export function mapView(): [string, string] {
   const locked = PLACES.filter((p) => !G.unlocked.includes(p.id)).length;
-  const why = G.job ? 'You dey work — finish before you waka.' : G.intro < 99 ? 'Settle into your house first.' : '';
+  const why = G.job ? 'You’re working. Finish before you leave.' : G.intro < 99 ? 'Settle into your house first.' : '';
   return ['🗺️ Map', `${svgMap()}
     ${why ? `<div class="warnbox">${why}</div>` : ''}
     ${G.unlocked.map(placeRow).join('')}
-    ${locked ? `<p class="note">${locked} more place(s) never show for map. Keep living — you go hear about them.</p>` : ''}
-    <p class="note">Gen, fan and TV only work when you dey house. Phone apps (units, shop) work anywhere — shop go charge delivery.</p>`];
+    ${locked ? `<p class="note">${locked} more place(s) aren’t on your map yet. Keep playing and you’ll hear about them.</p>` : ''}
+    <p class="note">Your generator, fan and TV only work when you’re home. Phone apps (units, shop) work anywhere; the shop charges for delivery.</p>`];
 }
 
 /** Hooks up the Map app's buttons; called by the phone after rendering. `after` re-renders the phone. */
@@ -130,7 +130,7 @@ export function updPlaceCard(): void {
   }
   const p = place(G.loc);
   const acts = PLACE_ACTIONS.filter((a) => a.at === G.loc);
-  const work = job ? `<div class="pcJob">${jobStalled() ? '⏳ Waiting for light…' : job.verb} · ${Math.round(jobProgress() * 100)}%
+  const work = job ? `<div class="pcJob">${jobStalled() ? '⏳ Waiting for power…' : job.verb} · ${Math.round(jobProgress() * 100)}%
     <div class="tb"><i style="width:${Math.round(jobProgress() * 100)}%"></i></div></div>` : '';
   const homeWalk = tripMins(G.loc, 'street', 'walk'), fare = okadaFare(G.loc, 'street');
   const fold = v3d ? `<button class="iconbtn flat pcFold" data-pc="fold" aria-label="${mini ? 'Show actions' : 'Fold card to look around'}">${mini ? '▾' : '▴'}</button>` : '';

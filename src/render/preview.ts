@@ -4,10 +4,13 @@ import { HAIRS, OUTFITS, SKINS } from '../data/content';
 /** `name: null` draws the character without a name label. */
 export interface Look { name: string | null; skin: number; hair: number; outfit: number }
 
-export function drawPreview(c: HTMLCanvasElement, look: Look): void {
+/** Backdrops: dark for the share card, light sky for the creator. */
+export const PREVIEW_BG = { dark: ['#25304d', '#141a2c'], light: ['#e6f3fd', '#c3def3'] } as const;
+
+export function drawPreview(c: HTMLCanvasElement, look: Look, bg: readonly [string, string] = PREVIEW_BG.dark): void {
   const x = c.getContext('2d'); if (!x) return;
   x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, 140, 190);
-  const g = x.createLinearGradient(0, 0, 0, 190); g.addColorStop(0, '#25304d'); g.addColorStop(1, '#141a2c');
+  const g = x.createLinearGradient(0, 0, 0, 190); g.addColorStop(0, bg[0]); g.addColorStop(1, bg[1]);
   x.fillStyle = g; x.fillRect(0, 0, 140, 190);
   x.save(); x.translate(70, 128); const s = 1.35;
   const of = OUTFITS[look.outfit], skin = SKINS[look.skin];
@@ -33,6 +36,6 @@ export function drawPreview(c: HTMLCanvasElement, look: Look): void {
   x.strokeStyle = '#1a1210'; x.lineWidth = 1.4 * s; x.beginPath(); x.arc(0, -49 * s, 3.6 * s, .15 * Math.PI, .85 * Math.PI); x.stroke();
   x.restore();
   if (look.name === null) return;
-  x.fillStyle = 'rgba(255,255,255,.85)'; x.font = '700 13px system-ui'; x.textAlign = 'center';
+  x.fillStyle = bg === PREVIEW_BG.dark ? 'rgba(255,255,255,.85)' : '#1b2238'; x.font = '700 13px system-ui'; x.textAlign = 'center';
   x.fillText(look.name || 'Your Name', 70, 178);
 }

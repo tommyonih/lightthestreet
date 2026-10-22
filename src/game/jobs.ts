@@ -29,21 +29,21 @@ export function jobStalled(): boolean { const h = currentHustle(); return !!h &&
 export const payFx: { amount: number; full: boolean }[] = [];
 
 export function doHustle(h: Hustle): void {
-  if (busy()) { toast(`💼 You never finish ${currentHustle()?.n ?? 'your work'} yet!`, 'bad'); return; }
-  if (G.trip) { toast(`🚶 You dey road to ${place(G.trip.to).n}. Reach first, then hustle.`, 'bad'); return; }
-  if ((G.hustleCd[h.id] ?? -9999) > T()) { toast('⏳ This hustle still dey cool down. Try another one.', 'bad'); return; }
+  if (busy()) { toast(`💼 You haven’t finished ${currentHustle()?.n ?? 'your work'} yet.`, 'bad'); return; }
+  if (G.trip) { toast(`🚶 You’re on your way to ${place(G.trip.to).n}. Get there first.`, 'bad'); return; }
+  if ((G.hustleCd[h.id] ?? -9999) > T()) { toast('⏳ This hustle isn’t ready yet. Try another one.', 'bad'); return; }
   if (h.need === 'any' && !placePowered(h.place)) {
-    toast(h.place === 'street' ? `🔌 ${h.n} needs light! NEPA off, gen off — how you wan work?` : `🔌 No NEPA light for ${place(h.place).n} — ${h.n} no fit work now.`, 'bad'); sfx.bad(); return;
+    toast(h.place === 'street' ? `🔌 ${h.n} needs power, and both the grid and your generator are off.` : `🔌 No grid power at ${place(h.place).n}, so ${h.n} can’t run right now.`, 'bad'); sfx.bad(); return;
   }
-  if (h.id === 'barb' && !present('barber')) { toast('💈 Skippo don lock shop. Come back when e dey around (9AM–8PM).', 'bad'); return; }
-  if (h.phone && G.phone < 5) { toast(`📵 Your phone don die — no customer fit reach you for ${h.n}. Charge am first!`, 'bad'); sfx.bad(); return; }
-  if (h.mb && G.dataMB < h.mb / 2) { toast(`📶 Data don finish — ${h.n} need about ${dataLabel(h.mb)}. Buy data for the NextPawa app.`, 'bad'); sfx.bad(); return; }
-  if (G.hunger > 90) { toast('🍲 Hunger don weak your body. Chop something before you hustle!', 'bad'); return; }
+  if (h.id === 'barb' && !present('barber')) { toast('💈 Skippo’s shop is locked. Come back while he’s there (9AM–8PM).', 'bad'); return; }
+  if (h.phone && G.phone < 5) { toast(`📵 Your phone is dead, so no customer can reach you for ${h.n}. Charge it first.`, 'bad'); sfx.bad(); return; }
+  if (h.mb && G.dataMB < h.mb / 2) { toast(`📶 You’re out of data. ${h.n} needs about ${dataLabel(h.mb)}. Buy data in the NextPawa app.`, 'bad'); sfx.bad(); return; }
+  if (G.hunger > 90) { toast('🍲 You’re too hungry to work. Eat something first.', 'bad'); return; }
   G.hustleCd[h.id] = T() + h.cd;
   G.job = { id: h.id, worked: 0, paused: 0 };
   const walk = G.loc === h.place ? 0 : tripMins(G.loc, h.place, 'walk');
   if (walk) setOff(h.place, 'walk');
-  toast(`${h.verb} — ${walk ? `you don waka go ${place(h.place).n} (~${walk} min)` : 'you don start'}. Work na ~${Math.round(h.mins / 60 * 10) / 10}h (game time).`, 'sys');
+  toast(`${h.verb}: ${walk ? `walking to ${place(h.place).n} (about ${walk} min)` : 'started'}. The job takes about ${Math.round(h.mins / 60 * 10) / 10}h of game time.`, 'sys');
   save(); updHUD(); renderPhone();
 }
 
@@ -51,7 +51,7 @@ export function doHustle(h: Hustle): void {
 export function jobTick(mins: number): void {
   const h = currentHustle(); if (!h || !G.job || commuting()) return;
   if (jobStalled()) {
-    if (G.job.paused === 0) toast(`⏳ Light don go — ${h.n} don stop. Waiting for light…`, 'bad');
+    if (G.job.paused === 0) toast(`⏳ The power went off, so ${h.n} has stopped. Waiting for power…`, 'bad');
     G.job.paused += mins;
     if (G.job.paused >= GIVE_UP_AFTER) finishJob(false);
     return;
@@ -60,7 +60,7 @@ export function jobTick(mins: number): void {
   if (h.phone) G.phone = clamp(G.phone - 3 * mins / h.mins, 0, 100); // the job uses your phone
   if (h.mb) {
     const before = G.dataMB; G.dataMB = Math.max(0, G.dataMB - h.mb * mins / h.mins);
-    if (before >= 100 && G.dataMB < 100) toast(`📶 Data don remain ${dataLabel()}. Top up for NextPawa before e finish.`, 'bad');
+    if (before >= 100 && G.dataMB < 100) toast(`📶 Only ${dataLabel()} of data left. Top up on NextPawa before it runs out.`, 'bad');
   }
   if (G.job.worked >= h.mins) finishJob(true);
 }
@@ -72,8 +72,8 @@ function finishJob(full: boolean): void {
   addCash(pay, full ? h.n : `${h.n} (customer left)`); G.week.c.hustle += pay; sfx.cash();
   payFx.push({ amount: pay, full });
   toast(full
-    ? `💼 ${h.n} done! You make <b>₦${fmt(pay)}</b>${G.bg === 'business' ? ' (business owner bonus)' : ''}.`
-    : `😩 Light no come back — customer waka. You only collect <b>₦${fmt(pay)}</b>.`, full ? 'sys' : 'bad');
+    ? `💼 ${h.n} done! You earned <b>₦${fmt(pay)}</b>${G.bg === 'business' ? ' (business owner bonus)' : ''}.`
+    : `😩 The power never came back and the customer left. You only got <b>₦${fmt(pay)}</b>.`, full ? 'sys' : 'bad');
   fun(3); G.hunger = clamp(G.hunger + 5, 0, 100);
   save(); updHUD(); renderPhone();
 }

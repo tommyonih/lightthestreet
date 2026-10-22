@@ -1,5 +1,5 @@
 import { G, SET, hasGame } from '../core/state';
-import { $, esc } from '../core/util';
+import { $, esc, fmt } from '../core/util';
 import { NEWS } from '../data/content';
 import { hourNow } from '../game/helpers';
 import { jobProgress, jobStalled } from '../game/jobs';
@@ -27,7 +27,10 @@ let lastCash = NaN;
 export function updHUD(): void {
   if (!hasGame() || isHeadless() || !$('#pillTime')) return;
   const h = Math.floor(hourNow()), m = G.minute % 60;
-  $('#pillTime').textContent = `Day ${G.day} • ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  $('#pillTime').textContent = `Day ${G.day} · ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  const mood = G.happiness >= 65 ? ['😊', 'Happy', 'good'] : G.happiness >= 40 ? ['😐', 'Fine', 'ok'] : ['😩', 'Low', 'low'];
+  const mt = $('#pillMoodTxt'); if (mt) { mt.textContent = `${mood[0]} ${mood[1]}`; mt.className = 'hp mood ' + mood[2]; }
+  const debt = $('#pillDebt'); if (debt) { debt.hidden = G.debt <= 0; debt.textContent = `Owes ₦${fmt(G.debt)}`; }
   $('#pillWeather').textContent = `${WEATHER_ICON[G.weather]} ${G.temp}°C`;
   const chip = $('#pillPlace'); chip.textContent = placeChip(); chip.hidden = !atHome(); // away, the place card says where you are
   updPlaceCard(); updGuide();
@@ -58,7 +61,7 @@ export function updHUD(): void {
   updSoundBtns();
 }
 
-const FEED_FROM = { sys: 'You', npc: 'Neighbour', bad: 'Wahala', '': 'Street' } as const;
+const FEED_FROM = { sys: 'You', npc: 'Neighbour', bad: 'Trouble', '': 'Street' } as const;
 let feedKey = '';
 /** The street feed under the scene: everything the street told you this session, newest first. */
 function updFeed(): void {
@@ -67,7 +70,7 @@ function updFeed(): void {
   if (key === feedKey) return;
   feedKey = key;
   $('#feedNews').textContent = '📰 ' + NEWS[G.day % NEWS.length].replace(/<[^>]+>/g, '');
-  if (!feed.length) { list.innerHTML = '<div class="fi empty">Quiet… too quiet. NEPA must be planning something.</div>'; return; }
+  if (!feed.length) { list.innerHTML = '<div class="fi empty">All quiet on the street. For now.</div>'; return; }
   list.innerHTML = feed.map((f) => {
     const lead = f.txt.match(/^\s*(\p{Extended_Pictographic}\uFE0F?)\s*/u);
     const body = lead ? f.txt.slice(lead[0].length) : f.txt;
@@ -76,6 +79,6 @@ function updFeed(): void {
 }
 
 export function updSoundBtns(): void {
-  $('#btnSoundW').innerHTML = `${icon(SET.sound ? 'sound' : 'mute', 18)} Sound: <span id="soundStateW">${SET.sound ? 'On' : 'Off'}</span>`;
+  const w = $('#btnSoundW'); if (w) w.innerHTML = `Sound: <span id="soundStateW">${SET.sound ? 'On' : 'Off'}</span>`;
   const g = $('#btnSoundG'); if (g) g.innerHTML = icon(SET.sound ? 'sound' : 'mute', 18);
 }

@@ -2,7 +2,8 @@
 import { G, T, hasGame } from '../core/state';
 import { $, clamp, fmt } from '../core/util';
 import { sfx } from '../core/audio';
-import { ACH, DATA_BUNDLES, HUSTLES, MEMORY, NEWS, SHOP } from '../data/content';
+import { ACH, BIRTHS, DATA_BUNDLES, DEBT_RATE, HUSTLES, MEMORY, NEWS, SHOP } from '../data/content';
+import { payDebt } from '../game/birth';
 import { moodLabel, salient } from '../game/memory';
 import { whereabouts } from '../game/schedule';
 import { ALL_DONE_BONUS, challenge, ensureWeek, progressShare, progressText, weekEndDay } from '../game/challenges';
@@ -12,6 +13,7 @@ import { dealModal, dealTaken, todaysDeals } from '../game/orders';
 import { busy, commuting, currentHustle, doHustle, jobProgress, jobStalled } from '../game/jobs';
 import { atHome, deliveryFee, npcPlace, place, setWaypoint, travelling, tripMins } from '../game/world';
 import { mapView, wireMap } from './map';
+import { closeMap, mapOpen, openMap } from './cityMap';
 import { genLabel, repairGen, startGen, stopGen } from '../game/generator';
 import { npcDef, sunUp } from '../game/helpers';
 import { checkObj } from '../game/progress';
@@ -23,13 +25,13 @@ import { icon } from './icons';
 export type Tab = 'apps' | 'meter' | 'power' | 'street' | 'map' | 'week' | 'wallet' | 'shop' | 'hustle' | 'gist' | 'tasks';
 /** The home-screen grid: [tab, label, icon, tile colour]. */
 const APPS: [Exclude<Tab, 'apps'>, string, string, string][] = [
-  ['meter', 'NextPawa', 'zap', '#f2a21b'], ['power', 'Power', 'plug', '#3f7fd8'], ['street', 'People', 'users', '#8a5cd0'],
+  ['meter', 'NextPawa', 'zap', '#ac4fde'], ['power', 'Power', 'plug', '#3f7fd8'], ['street', 'People', 'users', '#8a5cd0'],
   ['map', 'Map', 'map', '#c0612f'], ['week', 'Week', 'trophy', '#d0a52a'], ['wallet', 'Wallet', 'wallet', '#2f9e5a'],
-  ['shop', 'Shop', 'cart', '#d0503f'], ['hustle', 'Hustle', 'briefcase', '#4a6a8a'], ['gist', 'Gist', 'chat', '#2a9ab0'],
+  ['shop', 'Shop', 'cart', '#d0503f'], ['hustle', 'Hustle', 'briefcase', '#4a6a8a'], ['gist', 'News', 'chat', '#2a9ab0'],
   ['tasks', 'Tasks', 'check', '#6a8a3a'],
 ];
-/** Apps with their own slot on the tab bar; the rest light up "Apps". */
-const ON_TABBAR: Tab[] = ['meter', 'street', 'map', 'apps'];
+/** Apps with their own slot on the tab bar; the rest light up "Phone". */
+const ON_TABBAR: Tab[] = ['meter', 'map', 'apps'];
 
 let curTab: Tab = 'meter';
 
@@ -63,14 +65,19 @@ export function closePhone(): void {
 export function togglePhone(): void { if (phoneOpen()) closePhone(); else openPhone('meter'); }
 
 /** Light up the tab-bar slot for whatever is on screen. */
-function markTabbar(): void {
-  const open = phoneOpen(), slot = !open ? 'home' : ON_TABBAR.includes(curTab) ? curTab : 'apps';
+export function markTabbar(): void {
+  const open = phoneOpen(), slot = mapOpen() ? 'map' : !open ? 'home' : ON_TABBAR.includes(curTab) ? curTab : 'apps';
   document.querySelectorAll<HTMLElement>('#tabbar .tbi').forEach((b) => b.classList.toggle('sel', b.dataset.nav === slot));
 }
 
 /** Tab-bar tap: "home" closes the sheet, anything else opens (or closes, if already showing) that app. */
 export function navTo(slot: string): void {
-  if (slot === 'home') { closePhone(); return; }
+  if (slot === 'home') { closePhone(); closeMap(); return; }
+  if (slot === 'map') { // the 3D city map, full screen; the 2D map in the phone where it can't be drawn
+    if (mapOpen()) { closeMap(); return; }
+    if (openMap()) { closePhone(); markTabbar(); return; }
+  }
+  closeMap();
   if (phoneOpen() && curTab === slot) { closePhone(); return; }
   openPhone(slot as Tab);
 }
@@ -78,7 +85,7 @@ export function navTo(slot: string): void {
 const views: Record<Tab, () => [string, string]> = {
   apps() {
     return ['Apps', `<div class="apps">${APPS.map(([id, n, ic, c]) => `<button class="app" data-app="${id}"><span class="ai" style="background:linear-gradient(160deg,${c},${c}bb)">${icon(ic, 26)}</span>${n}</button>`).join('')}</div>
-      <p class="note">Tap houses and neighbours on the street to interact.</p>`];
+      <p class="note">Tap houses and neighbours on the street to interact with them.</p>`];
   },
   meter() {
     const drain = applianceDrain(); const minsLeft = drain > 0 ? G.meterUnits / drain : Infinity;
@@ -88,47 +95,47 @@ const views: Record<Tab, () => [string, string]> = {
       <div class="stat"><span>Current load</span><b>${drain.toFixed(3)}u/min</b></div>
       <div class="stat"><span>Estimated time left</span><b>${minsLeft === Infinity ? '—' : Math.floor(minsLeft / 60) + 'h ' + Math.round(minsLeft % 60) + 'm'}</b></div>
       <div class="stat"><span>Token credit status</span><b>${G.pendingCredit ? '⏳ Pending…' : '✅ Active'}</b></div>`;
-    if (G.meterUnits < 4) h += `<div class="warnbox">⚠️ Low credit! Light fit cut anytime you still dey use am. Buy units before wahala start.</div>`;
-    if (!G.gridOn) h += `<div class="warnbox">Street light no dey — even if you buy 100 units now, dem no go work until NEPA return.</div>`;
-    h += `<div class="npBrand"><b>⚡ NextPawa</b><span>Units & data — instant token, receipt every time</span></div>`;
-    h += [5, 10, 20].map((n, i) => `<button class="btn ${i === 0 ? 'primary ' : ''}small" data-buy="${n}">Buy ${n} units — ₦${fmt(n * UNIT_PRICE)}</button>`).join('');
-    h += `<label class="lbl">Mobile data · you get ${dataLabel()}</label>`;
-    if (G.dataMB < 150) h += `<div class="warnbox">📶 Data low! POS, deliveries, skits and online gigs need data. Top up here.</div>`;
+    if (G.meterUnits < 4) h += `<div class="warnbox">⚠️ Low credit! Your power could cut out at any moment. Buy units now.</div>`;
+    if (!G.gridOn) h += `<div class="warnbox">The grid is off. Units you buy now will work as soon as power returns.</div>`;
+    h += `<div class="npBrand"><b>⚡ NextPawa</b><span>Units and data. Instant token, receipt every time.</span></div>`;
+    h += [5, 10, 20].map((n, i) => `<button class="btn ${i === 0 ? 'primary ' : ''}small" data-buy="${n}">Buy ${n} units: ₦${fmt(n * UNIT_PRICE)}</button>`).join('');
+    h += `<label class="lbl">Mobile data · you have ${dataLabel()}</label>`;
+    if (G.dataMB < 150) h += `<div class="warnbox">📶 Low data! POS, deliveries, skits and online gigs need data. Top up here.</div>`;
     h += `<div class="row">${DATA_BUNDLES.map((b, i) => `<button class="btn small" data-data="${i}" ${G.cash < b.p ? 'disabled' : ''}>${b.n}<div class="evSub">₦${fmt(b.p)}</div></button>`).join('')}</div>`;
-    h += `<label class="lbl">Load promo token (once/day)</label>
+    h += `<label class="lbl">Load a promo token (once a day)</label>
         <input class="txt" id="tokIn" maxlength="14" placeholder="e.g. 5812-4470-9921">
         <button class="btn small" id="tokGo">Load token</button>`;
     const realPurchases = [
       partnerLink('nextpawa', 'electricity', 'electricity'),
       partnerLink('nextpawa', 'data', 'data'),
     ].filter(Boolean).join(' · ');
-    h += `<p class="note">In the game, everything here na game money — no real payment.${realPurchases ? `<br>For real-life purchases: ${realPurchases} — separate &amp; optional.` : ''}</p>`;
+    h += `<p class="note">Everything here uses game money. No real payments.${realPurchases ? `<br>Buying for real? ${realPurchases}. Separate and optional.` : ''}</p>`;
     return ['⚡ NextPawa', h];
   },
   power() {
     let h = `<div class="stat"><span>Grid (NEPA)</span><b style="color:${G.gridOn ? 'var(--green)' : 'var(--red)'}">${G.gridOn ? 'ON' : 'OFF'}</b></div>
       <div class="stat"><span>Generator</span><b>${G.gen === 0 ? 'None' : genLabel() + ' • ' + Math.round(G.genCond) + '%'}</b></div>
       <div class="stat"><span>Fuel ⛽</span><b>${G.fuel.toFixed(1)}L</b></div>
-      <div class="stat"><span>Status</span><b>${G.genOn ? '🔊 RUNNING' : 'Off'}</b></div>`;
+      <div class="stat"><span>Status</span><b>${G.genOn ? '🔊 Running' : 'Off'}</b></div>`;
     if (G.inverter > 0) h += `<div class="stat"><span>Inverter charge 🔋</span><b>${Math.round(G.invCharge)}%</b></div>`;
     if (G.solar > 0) h += `<div class="stat"><span>Solar ☀️</span><b>${sunUp() ? 'Generating' : 'Idle (no sun)'}</b></div>`;
     if (G.fanRecharge > 0) h += `<div class="stat"><span>Rechargeable fan 🌀</span><b>${Math.round(G.fanBat)}%</b></div>`;
     if (G.powerbank > 0) h += `<div class="stat"><span>Power bank</span><b>${G.pbankCharges} charge(s) today</b></div>
       <button class="btn small" id="pBank" ${G.pbankCharges > 0 && G.phone < 90 ? '' : 'disabled'}>🔋 Charge phone from power bank (+40%)</button>`;
     if (G.lamp > 0) h += `<div class="stat"><span>Rechargeable lamp 🔦</span><b>Ready</b></div>`;
-    h += `<div class="okbox">💡 Appliances: Fan ${G.fanOn ? '✅' : '❌'} • TV ${G.tvOn ? '✅' : '❌'} • Fridge ${G.fridgeOn ? '✅' : '❌'} — tap your house on the street to toggle.</div>
-      ${atHome() ? '' : '<div class="warnbox">🏠 You no dey house — gen and appliances go wait till you reach.</div>'}
+    h += `<div class="okbox">💡 Appliances: Fan ${G.fanOn ? '✅' : '❌'} · TV ${G.tvOn ? '✅' : '❌'} · Fridge ${G.fridgeOn ? '✅' : '❌'}. Tap your house on the street to switch them.</div>
+      ${atHome() ? '' : '<div class="warnbox">🏠 You’re not home. The generator and appliances will wait until you are.</div>'}
       <button class="btn primary small" id="pGen" ${atHome() ? '' : 'disabled'}>${G.genOn ? '⏹ Stop generator' : '▶ Start generator'}</button>
-      <button class="btn small" id="pRepair">🔧 Service gen (₦1,500)</button>
-      <p class="note">Safety: generator stays outdoors, away from windows — always. The game no reward unsafe play.<br><b>Gen fumes fit kill</b> — carbon monoxide no get colour or smell. Never run gen inside house, shop or garage.</p>`;
-    return ['🔌 Power App', h];
+      <button class="btn small" id="pRepair">🔧 Service the generator (₦1,500)</button>
+      <p class="note">Safety: generators always stay outdoors, away from windows.<br><b>Generator fumes can kill.</b> Carbon monoxide has no colour or smell. Never run one inside a house, shop or garage.</p>`;
+    return ['🔌 Power', h];
   },
   street() {
     let h = `<div class="stat"><span>Street fund 💰</span><b>₦${fmt(G.fund)} / ₦${fmt(G.fundGoal)}</b></div>
       <div class="stat"><span>Community trust</span><b>${Math.round(G.trust)}%</b></div>
       <div class="stat"><span>Streetlight</span><b>${G.streetlightFixed ? '💡 Fixed!' : '🔧 Broken'}</b></div>`;
-    if (G.fund > 0 && G.fund < G.fundGoal) h += `<div class="warnbox">${G.owing.length} house(s) never pay: ${G.owing.map((id) => npcDef(id).name).join(', ') || '—'}</div>`;
-    if (G.streetlightFixed) h += `<div class="okbox">Streetlight dey shine every night. Community goals complete — Chairman Material! 🎖️</div>`;
+    if (G.fund > 0 && G.fund < G.fundGoal) h += `<div class="warnbox">${G.owing.length} house(s) haven’t paid: ${G.owing.map((id) => npcDef(id).name).join(', ') || '—'}</div>`;
+    if (G.streetlightFixed) h += `<div class="okbox">The streetlight shines every night. Community goal complete: Chairman Material! 🎖️</div>`;
     h += `<label class="lbl">Street meetings</label>
       <div class="stat"><span>Chairman</span><b>${G.policies.youChair ? '🎖️ You' : 'Chairman Dele'}</b></div>
       <div class="stat"><span>Next meeting</span><b>Day ${G.nextMeetingDay}, 6–9PM</b></div>`;
@@ -138,14 +145,14 @@ const views: Record<Tab, () => [string, string]> = {
     h += `<label class="lbl">Neighbours</label>`;
     G.npcs.forEach((n) => {
       const d = npcDef(n.id), w = whereabouts(n.id), feel = moodLabel(n.id), m = salient(n.id), at = npcPlace(n.id);
-      // "Find am" for anyone who's somewhere on the map other than where you are
+      // "Find" for anyone who's somewhere on the map other than where you are
       const find = at && !(at === G.loc && !G.trip) && w.at !== 'in' && G.unlocked.includes(at)
-        ? ` <button class="pinBtn${G.waypoint === 'npc:' + n.id ? ' on' : ''}" data-find="${n.id}">📌 Find am</button>` : '';
+        ? ` <button class="pinBtn${G.waypoint === 'npc:' + n.id ? ' on' : ''}" data-find="${n.id}">📌 Find</button>` : '';
       h += `<div class="stat"><span>${d.name} <i style="color:var(--dim);font-size:11px">${d.role}</i>${n.owing ? ' <b style="color:var(--red)">OWES</b>' : ''}${find}</span><b>♥${Math.round(n.rel)}</b></div>
         <div style="font-size:11px;color:var(--dim);margin:-4px 0 6px 4px">${w.at === 'out' ? (w.place ? `📍 ${place(w.place).n} ·` : '🚶') : w.at === 'in' ? '🏠' : '📍'} ${w.act}${feel ? ' • ' + feel : ''}${m ? ` • remembers ${MEMORY[m.kind].note} (Day ${m.day})` : ''}</div>`;
     });
-    h += `<p class="note">Tap neighbours on the street to gist, help, or collect wahala.</p>`;
-    return ['🏘️ Street Group', h];
+    h += `<p class="note">Tap neighbours on the street to chat, help them, or ask for favours.</p>`;
+    return ['🏘️ People', h];
   },
   week() {
     ensureWeek();
@@ -167,48 +174,54 @@ const views: Record<Tab, () => [string, string]> = {
     return ['🏆 Weekly Challenges', h];
   },
   wallet() {
-    let h = `<div style="text-align:center;padding:8px 0"><div style="font-size:30px;font-weight:800;color:var(--amber)">₦${fmt(G.cash)}</div>
-      <div style="font-size:11.5px;color:var(--dim)">VIRTUAL money — no be real naira, no cash-out.</div></div>
-      <label class="lbl">Recent transactions</label>`;
+    let h = `<div style="text-align:center;padding:8px 0"><div style="font-size:30px;font-weight:800;color:var(--ink)">₦${fmt(G.cash)}</div>
+      <div style="font-size:11.5px;color:var(--dim)">Game money. Not real naira, and it can't be cashed out.</div></div>`;
+    if (G.birth) h += `<div class="stat"><span>Born</span><b>${BIRTHS[G.birth].emoji} ${BIRTHS[G.birth].n}</b></div>`;
+    if (G.debt > 0) {
+      h += `<div class="warnbox">💳 You owe <b>₦${fmt(G.debt)}</b>. It grows by ${Math.round(DEBT_RATE * 100)}% every morning.</div>
+        <div class="row"><button class="btn small" id="payDebt1" ${G.cash < 1 ? 'disabled' : ''}>Pay ₦${fmt(Math.min(1000, G.debt))}</button>
+        <button class="btn small primary" id="payDebtAll" ${G.cash < 1 ? 'disabled' : ''}>Pay ₦${fmt(Math.min(G.debt, Math.max(0, G.cash)))}${G.cash >= G.debt ? ' (all)' : ''}</button></div>`;
+    } else if (G.flags.debtCleared) h += `<div class="okbox">🎉 Debt free. You owe nobody.</div>`;
+    h += `<label class="lbl">Recent transactions</label>`;
     h += G.log.slice(0, 12).map((l) => `<div class="gistline"><i>${l.t}</i> — ${l.txt}</div>`).join('') || '<div class="gistline">No transactions yet.</div>';
     return ['💰 Wallet', h];
   },
   shop() {
-    let h = `<p class="note" style="margin-top:0">All prices fictional gameplay items. Solar Dreamer trait = 25% off power gear. Buy for the Market (fuel: Fuel Station) and you no pay delivery.</p>`;
+    let h = `<p class="note" style="margin-top:0">All prices are made up. Solar Dreamers get 25% off power gear. Buy at the Market (fuel at the Fuel Station) to skip delivery.</p>`;
     SHOP.forEach((it) => {
       const p = itemPrice(it.id), fee = deliveryFee(it.id);
       h += `<button class="btn small" data-shop="${it.id}">${it.n} — ₦${fmt(p + fee)}<div class="evSub">${it.d}${p !== it.p ? ' (discount!)' : ''}${fee ? ` · incl. ₦${fee} delivery` : ' · no delivery fee'}</div></button>`;
     });
     // online deals: cheaper, riskier — Verispon escrow is the safe way to pay
-    h += `<label class="lbl">📲 Online deals today</label><div class="npBrand vs"><b>🛡️ Verispon escrow</b><span>Money wait safe till your item land. Seller no deliver? Full refund.</span></div>`;
+    h += `<label class="lbl">📲 Online deals today</label><div class="npBrand vs"><b>🛡️ Verispon escrow</b><span>Your money waits safely until your item arrives. No delivery? Full refund.</span></div>`;
     todaysDeals().forEach((d, k) => {
       const it = SHOP.find((s) => s.id === d.item)!, taken = dealTaken(d);
-      h += `<button class="btn small" data-deal="${k}" ${taken ? 'disabled' : ''}>${it.n} — ₦${fmt(d.price)} <span style="color:var(--green)">(-${Math.round((1 - d.price / itemPrice(d.item)) * 100)}%)</span><div class="evSub">${taken ? 'You don order this one' : `${d.seller} · ${d.blurb}`}</div></button>`;
+      h += `<button class="btn small" data-deal="${k}" ${taken ? 'disabled' : ''}>${it.n} — ₦${fmt(d.price)} <span style="color:var(--green)">(-${Math.round((1 - d.price / itemPrice(d.item)) * 100)}%)</span><div class="evSub">${taken ? 'You already ordered this' : `${d.seller} · ${d.blurb}`}</div></button>`;
     });
     if (G.orders.length) h += `<label class="lbl">On the way</label>` + G.orders.map((o) => `<div class="gistline">📦 ${SHOP.find((s) => s.id === o.item)!.n} from ${o.seller} — ${o.via === 'verispon' ? '🛡️ Verispon holding ₦' + fmt(o.price) : '📲 paid direct'} · due in ~${Math.max(1, Math.round((o.until - T()) / 60))}h</div>`).join('');
     return ['🛒 Shop', h];
   },
   hustle() {
-    let h = `<p class="note" style="margin-top:0">Make virtual money. Some hustles need light (grid, gen, inverter or solar).${G.bg === 'business' ? ' Business owner: +10% pay, and your shop sells while light dey!' : ''}</p>`;
+    let h = `<p class="note" style="margin-top:0">Earn game money. Some hustles need power (grid, generator, inverter or solar).${G.bg === 'business' ? ' Business owner: +10% pay, and your shop sells while the power is on.' : ''}</p>`;
     const job = currentHustle();
-    if (job) h += `<div class="okbox"><b>${job.verb}</b> — ${commuting() ? `🚶 walking to ${place(job.place).n}…` : jobStalled() ? '⏳ waiting for light…' : Math.round(jobProgress() * 100) + '% done'}<div style="height:7px;background:var(--panel2);border-radius:9px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${Math.round(jobProgress() * 100)}%;background:var(--green)"></div></div></div>`;
+    if (job) h += `<div class="okbox"><b>${job.verb}</b> — ${commuting() ? `🚶 walking to ${place(job.place).n}…` : jobStalled() ? '⏳ waiting for power…' : Math.round(jobProgress() * 100) + '% done'}<div style="height:7px;background:var(--panel2);border-radius:9px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${Math.round(jobProgress() * 100)}%;background:var(--green)"></div></div></div>`;
     HUSTLES.forEach((x) => {
       const cd = Math.max(0, (G.hustleCd[x.id] || 0) - T());
       const wait = cd >= 60 ? Math.floor(cd / 60) + 'h ' + Math.round(cd % 60) + 'm' : Math.ceil(cd) + ' min';
-      const where = `📍 ${place(x.place).n}${G.loc === x.place && !G.trip ? ' (you dey here)' : ` · ${tripMins(G.loc, x.place, 'walk')} min waka`}`;
-      h += `<button class="btn small" data-hustle="${x.id}" ${cd > 0 || busy() || travelling() ? 'disabled' : ''}>${x.n} — ₦${x.pay[0]}–${x.pay[1]}${x.need === 'any' ? ' ⚡needs light' : ''}${x.phone ? ' 📱' : ''}${x.mb ? ` 📶${dataLabel(x.mb)}` : ''}<div class="evSub">${cd > 0 ? 'Ready in ' + wait + ' (game time)' : x.d} • takes ~${x.mins / 60}h<br>${where}</div></button>`;
+      const where = `📍 ${place(x.place).n}${G.loc === x.place && !G.trip ? ' (you’re here)' : ` · ${tripMins(G.loc, x.place, 'walk')} min walk`}`;
+      h += `<button class="btn small" data-hustle="${x.id}" ${cd > 0 || busy() || travelling() ? 'disabled' : ''}>${x.n} — ₦${x.pay[0]}–${x.pay[1]}${x.need === 'any' ? ' ⚡needs power' : ''}${x.phone ? ' 📱' : ''}${x.mb ? ` 📶${dataLabel(x.mb)}` : ''}<div class="evSub">${cd > 0 ? 'Ready in ' + wait + ' (game time)' : x.d} • takes ~${x.mins / 60}h<br>${where}</div></button>`;
     });
     return ['💼 Hustles', h];
   },
   gist() {
-    let h = `<div class="warnbox" style="background:#182030;border-color:var(--line);color:var(--ink)">📰 <b>Street News:</b> ${NEWS[G.day % NEWS.length]}</div>
-      <label class="lbl">Compound gist</label>`;
-    h += G.log.slice(0, 15).map((l) => `<div class="gistline"><i>${l.t}</i> — ${l.txt}</div>`).join('') || '<div class="gistline">Quiet… too quiet. NEPA must be planning something.</div>';
-    return ['💬 Gist & News', h];
+    let h = `<div class="newsbox">📰 <b>Street News:</b> ${NEWS[G.day % NEWS.length]}</div>
+      <label class="lbl">Around the compound</label>`;
+    h += G.log.slice(0, 15).map((l) => `<div class="gistline"><i>${l.t}</i> — ${l.txt}</div>`).join('') || '<div class="gistline">All quiet on the street. For now.</div>';
+    return ['💬 News', h];
   },
   map: mapView,
   tasks() {
-    let h = `<label class="lbl">Tutorial objectives (rewards!)</label>`;
+    let h = `<label class="lbl">Getting started (with rewards)</label>`;
     G.obj.forEach((o) => {
       const go = !o.done && TASK_GO[o.id] ? ` <button class="pinBtn" data-go="${TASK_GO[o.id][0]}">${TASK_GO[o.id][1]}</button>` : '';
       h += `<div class="stat"><span>${o.done ? '✅' : '⬜'} ${o.t}${go}</span><b>₦${o.rw}</b></div>`;
@@ -232,19 +245,23 @@ export function renderPhone(tab?: Tab): void {
   const b = $('#phoneBody'); b.innerHTML = html;
   if (prev !== curTab) { b.classList.remove('swap'); void b.offsetWidth; b.classList.add('swap'); b.scrollTop = 0; }
   const on = (sel: string, fn: () => void) => { const e = b.querySelector<HTMLElement>(sel); if (e) e.onclick = fn; };
-  b.querySelectorAll<HTMLElement>('[data-app]').forEach((e) => { e.onclick = () => { const t = e.dataset.app as Tab; renderPhone(t); if (t === 'meter') checkObj('meter'); }; });
+  b.querySelectorAll<HTMLElement>('[data-app]').forEach((e) => {
+    e.onclick = () => { const t = e.dataset.app as Tab; if (t === 'map') { navTo('map'); return; } renderPhone(t); if (t === 'meter') checkObj('meter'); };
+  });
   b.querySelectorAll<HTMLElement>('[data-buy]').forEach((e) => { e.onclick = () => buyUnits(Number(e.dataset.buy)); });
   on('#pGen', () => { if (G.genOn) stopGen(); else startGen(); renderPhone(); });
   on('#pBank', () => {
     if (G.pbankCharges <= 0) return;
-    G.pbankCharges--; G.phone = clamp(G.phone + 40, 0, 100); sfx.on(); toast('🔋 Power bank don push your phone up!', 'sys'); updHUD(); renderPhone();
+    G.pbankCharges--; G.phone = clamp(G.phone + 40, 0, 100); sfx.on(); toast('🔋 Power bank used. Phone +40%.', 'sys'); updHUD(); renderPhone();
   });
   on('#pRepair', repairGen);
+  on('#payDebt1', () => { payDebt(1000); renderPhone(); });
+  on('#payDebtAll', () => { payDebt(); renderPhone(); });
   on('#pShareCard', () => openShareSheet({ kind: 'session' }));
   on('#tokGo', () => {
     const v = (b.querySelector<HTMLInputElement>('#tokIn')?.value || '').replace(/\D/g, '');
-    if (v.length < 10) { toast('❌ Invalid token. Meter no gree read am.', 'bad'); return; }
-    if (G.flags.tokDay === G.day) { toast('⏳ Promo token already used today. Buy units, big man.', 'bad'); return; }
+    if (v.length < 10) { toast('❌ Invalid token. The meter couldn’t read it.', 'bad'); return; }
+    if (G.flags.tokDay === G.day) { toast('⏳ You’ve already used a promo token today.', 'bad'); return; }
     G.flags.tokDay = G.day; loadToken(3); toast('🎟️ Promo token accepted: +3 units!', 'sys');
   });
   b.querySelectorAll<HTMLElement>('[data-shop]').forEach((e) => { e.onclick = () => buyItem(e.dataset.shop!); });

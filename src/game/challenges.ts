@@ -36,7 +36,7 @@ export const CHALLENGES: Challenge[] = [
     value: (w) => w.c.hustle, reward: 1500 },
   { id: 'helper', title: '🤝 Good Neighbour Week', desc: 'Help 3 neighbours.', kind: 'count', target: 3,
     value: (w) => G.stats.helped - w.base.helped, reward: 1500 },
-  { id: 'quiet', title: '🤫 Quiet Street', desc: 'Survive 3 blackouts with zero gen complaints.', kind: 'count', target: 3,
+  { id: 'quiet', title: '🤫 Quiet Street', desc: 'Get through 3 blackouts with no generator complaints.', kind: 'count', target: 3,
     value: (w) => G.stats.blackouts - w.base.blackouts, broken: (w) => G.stats.complaints > w.base.complaints, reward: 1500 },
   { id: 'voice', title: '🗳️ Voice of the Street', desc: 'Be on the winning side of a meeting vote.', kind: 'count', target: 1,
     value: (w) => G.stats.votesWon - w.base.votesWon, reward: 1200 },
@@ -46,13 +46,13 @@ export const CHALLENGES: Challenge[] = [
     value: (w) => w.c.fundPaid, eligible: () => !G.streetlightFixed && G.owing.length >= 2, reward: 1500 },
   { id: 'peace', title: '🕊️ Make Peace or Make Friends', desc: 'Receive a favour or settle a grudge.', kind: 'count', target: 1,
     value: (w) => w.c.peace, reward: 1200 },
-  { id: 'meter', title: '🔋 Meter No Go Zero', desc: 'Your meter never hits 0 all week.', kind: 'end', target: 0,
+  { id: 'meter', title: '🔋 Never Hit Zero', desc: 'Your meter never hits 0 all week.', kind: 'end', target: 0,
     value: () => 0, broken: (w) => w.c.meterZero, reward: 2000 },
   { id: 'phone', title: '📱 Battery Boss', desc: 'Never let your phone drop below 20%.', kind: 'end', target: 0,
     value: () => 0, broken: (w) => w.c.phoneLow, reward: 1500 },
-  { id: 'saver', title: '🐷 Save Small', desc: 'End the week with ₦5,000 more than you started.', kind: 'end', target: 5000, unit: '₦',
+  { id: 'saver', title: '🐷 Saver', desc: 'End the week with ₦5,000 more than you started.', kind: 'end', target: 5000, unit: '₦',
     value: (w) => G.cash - w.startCash, reward: 1500 },
-  { id: 'gendiet', title: '⛽ Gen Diet', desc: 'Run your generator less than 3 hours all week.', kind: 'end', target: 0,
+  { id: 'gendiet', title: '⛽ Generator Diet', desc: 'Run your generator less than 3 hours all week.', kind: 'end', target: 0,
     value: () => 0, broken: (w) => w.c.genMin > 180, eligible: () => G.gen > 0, reward: 1500 },
 ];
 
@@ -140,7 +140,7 @@ function showWeekSummary(old: WeekState, done: number): void {
   const rows = old.list.map((i) => `${i.state === 'done' ? '✅' : '❌'} ${challenge(i.id).title}${i.state === 'done' ? ` <span style="color:var(--green)">+₦${fmt(challenge(i.id).reward)}</span>` : ''}`).join('<br>');
   const all = done === old.list.length && done > 0;
   if (all) sfx.cheer();
-  openModal(`📅 Week ${old.n} don finish!`, `${rows}<br><br><b>${'★'.repeat(done)}${'☆'.repeat(old.list.length - done)}</b> ${done}/${old.list.length} challenges${all ? `<br><span style="color:var(--green)">All three! Bonus +₦${fmt(ALL_DONE_BONUS)} 🎉</span>` : ''}<br><br>New week, new wahala: ${G.week.list.map((i) => challenge(i.id).title).join(', ')}.`, [
+  openModal(`📅 Week ${old.n} is over!`, `${rows}<br><br><b>${'★'.repeat(done)}${'☆'.repeat(old.list.length - done)}</b> ${done}/${old.list.length} challenges${all ? `<br><span style="color:var(--green)">All three! Bonus +₦${fmt(ALL_DONE_BONUS)} 🎉</span>` : ''}<br><br>New week, new challenges: ${G.week.list.map((i) => challenge(i.id).title).join(', ')}.`, [
     { t: '🖼️ Make my week card', fn: () => shareWeek?.(old) },
     { t: 'Continue' },
   ]);

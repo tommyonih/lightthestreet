@@ -21,7 +21,8 @@ A change is done only when `npm test` and `npm run build` both pass. Deploys go 
 
 - Vanilla TypeScript, Vite, HTML/CSS, Canvas 2D and three.js for the 3D street. **No framework.** Runtime dependencies: `@supabase/supabase-js` and `three`, both loaded lazily (`three` only when the 3D view starts). Nothing outside `src/render3d/` may import `three`. Don't add a package without asking.
 - The 2D street is a permanent fallback (no WebGL, slow phones, user choice). Every street feature must work in both views; the 3D view reads game state and reports taps through `streetHit()` in `ui/interact.ts`, it never changes game state itself.
-- The game must work fully offline and signed out. `localStorage` is the live save; wrap every storage call in try/catch, as `src/core/state.ts` does.
+- When Supabase is configured, an account is required to play (sign up / log in, or Google). Without it (tests, local dev with no `.env.local`) the game plays fully offline and signed out. `localStorage` is the live save; wrap every storage call in try/catch, as `src/core/state.ts` does.
+- Inside nextpawa.com the game runs in an iframe at `/game/app/` (built by the parent repo's `scripts/build-game.mjs`). It shares the site's origin and Supabase session; Google sign-in navigates the top window and returns through the site's `/auth/callback` (`VITE_AUTH_RETURN`).
 - Supabase (optional accounts, cloud save, reports) lives in `src/net/` and `supabase/`; see [supabase/README.md](supabase/README.md). `core/` and `game/` never import `net/`. Network code plugs in through hooks (`onSave`, `onWeekEnd`). Every cloud feature must no-op when `cloudEnabled()` is false (as in tests and local dev without `.env.local`).
 - Schema changes go in a **new** file in `supabase/migrations/`. Every table gets RLS with owner-only policies in the same migration. Only the anon key goes in the client; never the service_role key.
 - Offline-first PWA: `public/sw.js` caches the app shell. If you add a static asset the app needs offline, add it there and bump the cache name.
@@ -36,6 +37,10 @@ A change is done only when `npm test` and `npm run build` both pass. Deploys go 
 | A meeting motion | append to `MOTIONS` in `src/game/meetings.ts`, with a stance for every neighbour |
 | A weekly challenge | append to `CHALLENGES` in `src/game/challenges.ts` |
 | Our products (NextPawa, Verispon, Tapmonie, Pressmonie) | names, taglines, real URLs and referral codes in `PARTNERS` (`src/data/content.ts`); real links only via `partnerLink()` in `game/economy.ts` (shows nothing until a URL is set). Online deals and escrow in `game/orders.ts`. Products are used with game money; real-world links stay labelled "separate & optional" |
+| Net Baby / Local Baby birth roll, debt | `BIRTHS`, `DEBT_RATE` in `src/data/content.ts`; rules in `src/game/birth.ts`; the reveal screen in `src/ui/birthReveal.ts` |
+| Billboard / banner ads for our products | copy in `ADS` (`src/data/content.ts`); artwork drawn by `src/render/ads.ts`; the product sheet is `src/ui/products.ts` |
+| The city map (welcome background, Map tab) | `src/render3d/city.ts` (3D, lazy); on-screen control in `src/ui/cityMap.ts` |
+| Account screens (sign up, log in, date of birth, reset) | `src/ui/account.ts`; Supabase calls in `src/net/auth.ts` |
 | A place on the map | `PLACES` + a route in `PATHS` (`src/data/content.ts`); things to do there go in `PLACE_ACTIONS` in `src/game/world.ts`; its 3D set is a builder in `BUILD` (`src/render3d/sets.ts`) plus a layout in `SETS` (`src/render3d/space.ts`, tested) |
 | Game rules or simulation | `src/game/` (one file per system; `sim.ts` owns `tick()`) |
 | Shared types / state / save / audio / haptics | `src/core/` |
@@ -70,7 +75,7 @@ Dependency direction: `data` → `core` → `game` → `render` → `net` → `u
 ## Code style
 
 - Match the surrounding code: compact, data-driven, short JSDoc on non-obvious fields, comments that explain *why*.
-- Player-facing text uses light Nigerian Pidgin and humour (see DESIGN.md → Voice). Code, comments and commit messages are in plain English.
+- Player-facing text is plain, short standard English with light humour, no Pidgin (see DESIGN.md → Voice). Code, comments and commit messages are in plain English too.
 - Respect `SET.motion` (and `prefers-reduced-motion`) for any new animation or particle effect, and `SET.sound` for audio.
 - Escape user-provided strings (player name) with `esc()` before putting them in HTML.
 

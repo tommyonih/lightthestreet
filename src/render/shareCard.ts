@@ -11,14 +11,14 @@ export const CARD_W = 1080, CARD_H = 1350;
 export type CardKind = { kind: 'session' } | { kind: 'week'; week: WeekState };
 
 export function statusLine(): string {
-  return G.streetlightFixed ? '💡 STREET DON LIGHT UP — MISSION COMPLETE!'
-    : G.happiness >= 60 ? '⚡ LIGHT DON COME… FOR NOW.' : '😩 THE STREET DEY TEST YOU.';
+  return G.streetlightFixed ? '💡 THE STREET IS LIT. MISSION COMPLETE!'
+    : G.happiness >= 60 ? '⚡ THE POWER IS ON… FOR NOW.' : '😩 THE STREET IS TESTING YOU.';
 }
 
 /** The card's banner (the title already says "Light Up Your Street"). */
 function bannerLine(): string {
-  return G.streetlightFixed ? 'MISSION COMPLETE — THE STREET DON LIGHT!'
-    : G.happiness >= 60 ? 'LIGHT DON COME… FOR NOW.' : 'THE STREET DEY TEST ME.';
+  return G.streetlightFixed ? 'MISSION COMPLETE: THE STREET IS LIT!'
+    : G.happiness >= 60 ? 'THE POWER IS ON… FOR NOW.' : 'THE STREET IS TESTING ME.';
 }
 
 /* Score marks are drawn as shapes, so they never depend on the device having a symbol font. */
@@ -133,7 +133,7 @@ export function renderShareCard(card: CardKind, canvas: HTMLCanvasElement = docu
   // the way back in: every shared card names the site, so a Status brings people to play
   x.fillStyle = 'rgba(0,0,0,.7)'; x.fillRect(0, 1278, CARD_W, 72);
   x.fillStyle = '#ffb347'; x.font = font(900, 34);
-  x.fillText('▶ Play free: lightupyourstreet.com', CARD_W / 2, 1316);
+  x.fillText('▶ Play free: nextpawa.com/game', CARD_W / 2, 1316);
   x.fillStyle = '#d8d0bc'; x.font = font(600, 20);
   x.fillText('All money & units are fictional • 18+ • #LightUpYourStreet', CARD_W / 2, 1341);
   return canvas;

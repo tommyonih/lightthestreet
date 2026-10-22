@@ -27,7 +27,7 @@ export function todaysDeals(day = G.day): Deal[] {
     const item = DEAL_ITEMS[Math.floor(rng() * DEAL_ITEMS.length)];
     const price = Math.round(itemPrice(item) * (.62 + rng() * .1) / 50) * 50;
     return { key: `deal${day}-${k}`, item, price, seller: SELLERS[Math.floor(rng() * SELLERS.length)], honest: rng() > .4,
-      blurb: rng() < .5 ? '"Brand new, still in nylon. Pay first, I ship today."' : '"Last one remaining! Send money now make I reserve am."' };
+      blurb: rng() < .5 ? '"Brand new, still in the box. Pay first, I ship today."' : '"Last one left! Send the money now and I’ll hold it for you."' };
   });
 }
 /** Each deal can be taken once (it's gone from the seller's page after). */
@@ -39,7 +39,7 @@ const DELIVERY = [180, 360];
 /** Buy a deal: straight to the seller, or through Verispon escrow. */
 export function payDeal(d: Deal, via: 'direct' | 'verispon'): boolean {
   const fee = via === 'verispon' ? escrowFee(d.price) : 0, total = d.price + fee;
-  if (G.cash < total) { toast(`💸 ₦${fmt(total)} no dey your pocket.`, 'bad'); return false; }
+  if (G.cash < total) { toast(`💸 You don’t have ₦${fmt(total)}.`, 'bad'); return false; }
   const name = SHOP.find((s) => s.id === d.item)!.n;
   addCash(-total, via === 'verispon' ? `${name} — held in Verispon escrow` : `${name} — paid ${d.seller} direct`);
   (G.flags.did ??= {})[d.key] = G.day;
@@ -47,18 +47,18 @@ export function payDeal(d: Deal, via: 'direct' | 'verispon'): boolean {
   const o: Order = { item: d.item, price: d.price, fee, seller: d.seller, via, honest: d.honest, until };
   G.orders.push(o); sfx.cash();
   toast(via === 'verispon'
-    ? `🛡️ Verispon dey hold your ₦${fmt(d.price)}. ${d.seller} go only collect am when your ${name} land.`
-    : `📲 You send ₦${fmt(d.price)} to ${d.seller}. "Thanks dear, e go reach you today." Hmm.`, 'sys');
+    ? `🛡️ Verispon is holding your ₦${fmt(d.price)}. ${d.seller} only gets paid when your ${name} arrives.`
+    : `📲 You sent ₦${fmt(d.price)} to ${d.seller}. "Thanks dear, it will reach you today." Hmm.`, 'sys');
   save(); updHUD(); return true;
 }
 
 /** The deal sheet: the same choice the street event offers. */
 export function dealModal(d: Deal, title = `📦 ${d.seller}`): void {
   const it = SHOP.find((s) => s.id === d.item)!, fee = escrowFee(d.price), real = partnerLink('verispon', 'Verispon for real deals');
-  openModal(title, `<b>${it.n}</b> for <b>₦${fmt(d.price)}</b> <span style="color:var(--dim)">(shop price ₦${fmt(itemPrice(d.item))})</span><br><i>${d.blurb}</i><br><br><span style="font-size:12px;color:var(--dim)">You no fit see the seller. Pay direct and pray, or pay with Verispon: money wait in escrow till the item land, refund if e no land.</span>${real ? `<br><span style="font-size:12px;color:var(--dim)">${real} — separate &amp; optional, not part of the game.</span>` : ''}`, [
-    { t: `🛡️ Pay with Verispon — ₦${fmt(d.price + fee)}`, sub: `₦${fmt(fee)} escrow fee. Your money safe till delivery.`, dis: G.cash < d.price + fee, fn: () => { payDeal(d, 'verispon'); } },
-    { t: `📲 Pay seller direct — ₦${fmt(d.price)}`, sub: 'Cheaper… if the seller dey real.', dis: G.cash < d.price, fn: () => { payDeal(d, 'direct'); } },
-    { t: 'Leave am' },
+  openModal(title, `<b>${it.n}</b> for <b>₦${fmt(d.price)}</b> <span style="color:var(--dim)">(shop price ₦${fmt(itemPrice(d.item))})</span><br><i>${d.blurb}</i><br><br><span style="font-size:12px;color:var(--dim)">You can’t see the seller. Pay them directly and hope, or pay with Verispon: your money waits in escrow until the item arrives, and you get a refund if it doesn’t.</span>${real ? `<br><span style="font-size:12px;color:var(--dim)">${real}. Separate and optional, not part of the game.</span>` : ''}`, [
+    { t: `🛡️ Pay with Verispon: ₦${fmt(d.price + fee)}`, sub: `₦${fmt(fee)} escrow fee. Your money is safe until delivery.`, dis: G.cash < d.price + fee, fn: () => { payDeal(d, 'verispon'); } },
+    { t: `📲 Pay the seller directly: ₦${fmt(d.price)}`, sub: 'Cheaper… if the seller is real.', dis: G.cash < d.price, fn: () => { payDeal(d, 'direct'); } },
+    { t: 'Leave it' },
   ]);
 }
 
@@ -71,15 +71,15 @@ export function ordersTick(): void {
   for (const o of due) {
     const name = SHOP.find((s) => s.id === o.item)!.n;
     if (o.honest) {
-      if (o.via === 'verispon') { G.stats.escrowDeals++; toast(`📦 Your ${name} don land! You confirm am on Verispon — ${o.seller} collect the money. Clean deal.`, 'sys'); }
-      else toast(`📦 ${o.seller} actually deliver your ${name}! This one dey real. You lucky.`, 'sys');
+      if (o.via === 'verispon') { G.stats.escrowDeals++; toast(`📦 Your ${name} arrived! You confirmed it on Verispon and ${o.seller} got paid. A clean deal.`, 'sys'); }
+      else toast(`📦 ${o.seller} actually delivered your ${name}! A real seller. You got lucky.`, 'sys');
       grantItem(o.item);
     } else if (o.via === 'verispon') {
-      addCash(o.price + o.fee, `Verispon refund — ${o.seller} never deliver`); sfx.cash();
-      toast(`🛡️ ${o.seller} no deliver, then block you. <b>Verispon refund your ₦${fmt(o.price + o.fee)}</b>. Scammer collect zero.`, 'sys');
+      addCash(o.price + o.fee, `Verispon refund: ${o.seller} never delivered`); sfx.cash();
+      toast(`🛡️ ${o.seller} never delivered and blocked you. <b>Verispon refunded your ₦${fmt(o.price + o.fee)}</b>. The scammer got nothing.`, 'sys');
     } else {
       sfx.bad(); mood(-10);
-      toast(`🚫 ${o.seller} don block you. Your ₦${fmt(o.price)} for ${name} don go. If na Verispon, you for get refund…`, 'bad');
+      toast(`🚫 ${o.seller} blocked you. Your ₦${fmt(o.price)} for the ${name} is gone. With Verispon, you’d have been refunded.`, 'bad');
     }
   }
   checkAch(); save(); updHUD();

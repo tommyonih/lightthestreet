@@ -1,4 +1,4 @@
-import type { MemKind, PlaceId } from '../data/content';
+import type { Birth, MemKind, PlaceId } from '../data/content';
 
 export type Weather = 'sunny' | 'hot' | 'rain' | 'storm';
 export type StreetType = 'regular' | 'nepo' | 'lapo' | 'midnight' | 'daytime' | 'station';
@@ -46,6 +46,8 @@ export interface Flags {
   transformerDone?: boolean;
   emekaUnits?: number;
   tokDay?: number;
+  /** Paid off a debt you were born with. */
+  debtCleared?: boolean;
   /** Last day each once-a-day place action was used, keyed by action id. */
   did?: Record<string, number>;
 }
@@ -205,6 +207,10 @@ export interface GameState {
   /** What kind of street you live on — decides how often NEPA takes light. */
   streetType: StreetType;
   streetName: string;
+  /** Net Baby or Local Baby, rolled at the start of a life. Null for lives started before the roll existed. */
+  birth: Birth | null;
+  /** Money owed to the lender (Local Babies can start with it). Grows by DEBT_RATE every morning. */
+  debt: number;
   resText?: string;
 }
 

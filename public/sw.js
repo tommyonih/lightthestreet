@@ -1,6 +1,6 @@
 /* Offline support. Pages: network first, cached copy when offline. Everything else: cache first.
    Vite fingerprints asset names, so a cached asset never goes stale — a new build ships new names. */
-const CACHE = 'luts-v2'; // v2: renamed to Light Up Your Street (manifest changed)
+const CACHE = 'luts-v3'; // v3: light theme, accounts and the city map (manifest changed)
 const SHELL = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CACHEABLE_HOSTS = [self.location.host, 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

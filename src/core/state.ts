@@ -4,7 +4,7 @@ import { HUSTLES, NPCDEF, PLACES, type PlaceId } from '../data/content';
 const SAVE_KEY = 'luts_save_v1';
 const SETTINGS_KEY = 'luts_settings';
 export const FIRST_MEETING_DAY = 3;
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 /** Mobile data every new (or upgraded) player starts with, in MB. */
 export const STARTING_DATA = 800;
@@ -60,7 +60,7 @@ export function freshState(): GameState {
     policies: {}, meetings: [], nextMeetingDay: FIRST_MEETING_DAY,
     job: null, loc: 'street', trip: null, visited: ['street'], unlocked: unlockedBy(1), waypoint: null, orders: [],
     week: emptyWeek(1, 1, 3000, stats), weekHistory: [],
-    streetType: 'regular', streetName: 'Your Street',
+    streetType: 'regular', streetName: 'Your Street', birth: null, debt: 0,
   };
 }
 
@@ -116,6 +116,7 @@ export function migrate(s: any): GameState {
   }
   if (s.ver < 8) { s.waypoint = null; s.ver = 8; }
   if (s.ver < 9) { s.dataMB = STARTING_DATA; s.orders = []; s.stats.escrowDeals = 0; s.ver = 9; }
+  if (s.ver < 10) { s.birth = null; s.debt = 0; s.ver = 10; }
   s.genOn = false; // nobody leaves a gen running while they're away
   return s as GameState;
 }

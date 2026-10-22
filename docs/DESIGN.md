@@ -56,7 +56,7 @@ Rules: use tokens, not new hex values. Status colours always mean the same thing
 
 ## Voice
 
-- Player-facing text is warm, funny, everyday Nigerian English with light Pidgin ("Light fit go anytime — stay ready!", "No wahala", "Sure sure?"). Keep it readable for non-Pidgin speakers.
+- Player-facing text is plain, standard English: short, warm and lightly funny ("Power can go at any time.", "Are you sure?"). No Pidgin. One short sentence beats two; no long paragraphs. Lagos flavour comes from names, places and situations (okada, Mama Put, NEPA), not from the grammar.
 - Emoji at the start of toasts and modal titles, one per message.
 - Money is shown as `₦` with `fmt()`, and the copy makes clear it's virtual.
 - The jokes are about the situation (NEPA, DisCo, landlords, generator noise), never about players or real groups.

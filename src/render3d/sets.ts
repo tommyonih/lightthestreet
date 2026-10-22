@@ -175,7 +175,7 @@ const BUILD: Record<Exclude<PlaceId, 'street'>, Build> = {
       g.add(box(.7, .4, .05, std('#132a19', { emissive: '#5fd068', emissiveIntensity: .5 }), x, 1.35, -.18));
       g.add(box(.08, .9, .08, std('#222'), x + .55, .9, -.5));
     }
-    addSign(s, 'FUEL', 6, 1.2, '#c0392b', '#ffffff', 1, 4.6, 2.52, 'PMS · Price na fictional');
+    addSign(s, 'FUEL', 6, 1.2, '#c0392b', '#ffffff', 1, 4.6, 2.52, 'PMS · Made-up prices');
     block(g, 13, 5, 3.4, '#e9e4d8', -3.5, 4);
     addSign(s, 'MART', 3, .7, '#2f6db5', '#ffffff', 13, 2.8, -1.45);
     for (let i = 0; i < 6; i++) g.add(box(.35, .5, .25, std('#f2c230'), -9 + i * .55, .25, 1.2)); // jerrycans queueing
@@ -189,7 +189,7 @@ const BUILD: Record<Exclude<PlaceId, 'street'>, Build> = {
     g.add(box(17, .5, 2.4, std('#cfcabd'), -6, 5.85, -1.4));
     addSign(s, 'FACULTY OF SCIENCE', 8, 1, '#1d3557', '#ffffff', -6, 5.85, -.18);
     block(g, 9, 6, 3.6, '#2f6db5', -3, 4);
-    addSign(s, 'CYBER CAFÉ', 4.6, .9, '#111827', '#5fd068', 9, 3, -.95, 'Gen dey · Browse · Print · Charge');
+    addSign(s, 'CYBER CAFÉ', 4.6, .9, '#111827', '#5fd068', 9, 3, -.95, 'Generator on · Browse · Print · Charge');
     g.add(hit(s, box(2.4, 2.2, .2, std('#22303f', { roughness: .2 }), 9, 1.1, -.95), { kind: 'act', id: 'cafeCharge' }));
     const r = SETS.campus.jobs.remote;
     g.add(box(1.4, .08, .7, std('#8b5a2b'), r.x + .8, .78, r.z - .4), box(.6, .4, .04, std('#1b2433', { emissive: '#5aa9ff', emissiveIntensity: .6 }), r.x + .8, 1.05, r.z - .55));
@@ -201,7 +201,7 @@ const BUILD: Record<Exclude<PlaceId, 'street'>, Build> = {
     // a glassy office, a queue behind a rope, and a long-suffering bench
     block(g, 2, 14, 7.6, '#d5d8dc', -4, 5);
     g.add(hit(s, box(3, 2.6, .1, std('#22303f', { roughness: .15, metalness: .4 }), 7, 1.3, -1.45), { kind: 'act', id: 'complain' }));
-    addSign(s, 'DisCo CUSTOMER CARE', 8, 1.1, '#f2c230', '#1d1d1d', 2, 6.2, -1.42, 'Fictional · "We go escalate am"');
+    addSign(s, 'DisCo CUSTOMER CARE', 8, 1.1, '#f2c230', '#1d1d1d', 2, 6.2, -1.42, 'Fictional · "We will escalate it"');
     for (let x = .5; x <= 6.5; x += 1.5) g.add(cyl(.05, 1, std('#c0a020'), x, .5, .1, 6));
     g.add(box(6, .05, .05, std('#8a1a1a'), 3.5, .95, .1));
     bench(g, -6, 1.2, 3); tree(g, -14, -.6);

@@ -82,12 +82,12 @@ const placeName = (): string => place(G.loc).n;
 
 /** Why you can't set off right now, or null if you can. */
 export function cantTravel(to: PlaceId, mode: 'walk' | 'okada'): string | null {
-  if (G.intro < 99) return 'Settle into your house first!';
-  if (G.job) return 'You still dey work — finish first.';
-  if (G.trip) return `You dey road already, going ${place(G.trip.to).n}.`;
-  if (G.loc === to) return 'You dey here already.';
-  if (!G.unlocked.includes(to)) return 'You never hear of that place.';
-  if (mode === 'okada' && G.cash < okadaFare(G.loc, to)) return 'Okada money no dey your pocket.';
+  if (G.intro < 99) return 'Settle into your house first.';
+  if (G.job) return 'You’re still working. Finish first.';
+  if (G.trip) return `You’re already on your way to ${place(G.trip.to).n}.`;
+  if (G.loc === to) return 'You’re already here.';
+  if (!G.unlocked.includes(to)) return 'You haven’t heard of that place yet.';
+  if (mode === 'okada' && G.cash < okadaFare(G.loc, to)) return 'You can’t afford the okada.';
   return null;
 }
 
@@ -96,10 +96,10 @@ export function startTrip(to: PlaceId, mode: 'walk' | 'okada' = 'walk'): boolean
   const why = cantTravel(to, mode);
   if (why) { toast('🚫 ' + why, 'bad'); return false; }
   if (mode === 'okada') addCash(-okadaFare(G.loc, to), `Okada to ${place(to).n}`);
-  if (G.loc === 'street' && G.genOn) setTimeout(() => toast('🔌 Your gen still dey run for house o. Fuel dey burn while you waka.', 'bad'), 900);
+  if (G.loc === 'street' && G.genOn) setTimeout(() => toast('🔌 Your generator is still running at home. It’s burning fuel while you’re out.', 'bad'), 900);
   setOff(to, mode);
   const mins = tripMins(G.loc, to, mode);
-  toast(`${mode === 'okada' ? '🛵 Okada carry you' : '🚶 You don waka'} go ${place(to).n} — ~${mins} min.`, 'sys');
+  toast(`${mode === 'okada' ? '🛵 Taking an okada' : '🚶 Walking'} to ${place(to).n}: about ${mins} min.`, 'sys');
   save(); updHUD();
   return true;
 }
@@ -122,11 +122,11 @@ function arrive(): void {
   const to = G.trip!.to; G.trip = null; G.loc = to;
   const p = place(to);
   renderPhone(); // the Map and Hustle apps show where you are
-  if (to === 'street') { toast('🏠 You don reach house.', 'sys'); return; }
+  if (to === 'street') { toast('🏠 You’re home.', 'sys'); return; }
   if (!G.visited.includes(to)) {
     G.visited.push(to); fun(5); sfx.cash();
-    toast(`📍 First time for <b>${p.n}</b>! ${p.blurb}`, 'sys'); checkObj('visit');
-  } else toast(`📍 You don reach ${p.n}.${isOpen(to) ? '' : ' E don close sha — ' + openLabel(to) + '.'}`, 'sys');
+    toast(`📍 First time at <b>${p.n}</b>! ${p.blurb}`, 'sys'); checkObj('visit');
+  } else toast(`📍 You’ve arrived at ${p.n}.${isOpen(to) ? '' : ' It’s closed right now: ' + openLabel(to) + '.'}`, 'sys');
 }
 
 /* ---------- waypoints: where the map is guiding you ---------- */
@@ -149,8 +149,8 @@ export function setWaypoint(w: Waypoint | null, quiet = false): void {
   G.waypoint = w;
   if (w && !quiet) {
     const p = waypointPlace();
-    toast(p ? `📌 Map don mark <b>${waypointLabel()}</b>${p === G.loc && !G.trip ? ' — you dey there already!' : ` · ${walkMins(G.loc, p)} min waka`}.`
-      : `📌 ${waypointLabel()} — dem no dey anywhere for map now. Check back later.`, 'sys');
+    toast(p ? `📌 Marked <b>${waypointLabel()}</b> on your map${p === G.loc && !G.trip ? '. You’re already there!' : ` · ${walkMins(G.loc, p)} min walk`}.`
+      : `📌 ${waypointLabel()} isn’t anywhere on the map right now. Check back later.`, 'sys');
   }
   updHUD(); renderPhone();
 }
@@ -170,7 +170,7 @@ export function goToWaypoint(mode: 'walk' | 'okada' = 'walk'): void {
 function reachedWaypoint(): void {
   const p = waypointPlace(); if (!p || G.trip || p !== G.loc) return;
   const npc = wpNpc();
-  if (npc) toast(`📌 ${npcDef(npc).name} dey here! Tap am for the card to talk.`, 'sys');
+  if (npc) toast(`📌 ${npcDef(npc).name} is here! Tap their name on the card to talk.`, 'sys');
   G.waypoint = null;
 }
 
@@ -185,7 +185,7 @@ export function worldTick(): void {
   }
   // the meeting starts at 6PM at home; a nudge half an hour before if you're out
   if (G.day >= G.nextMeetingDay && !atHome() && G.minute >= MEETING_START - 30 && G.minute < MEETING_START - 26) {
-    toast(`🗳️ Street meeting go start 6PM and you dey ${G.trip ? 'road' : placeName()}. Waka home!`, 'bad');
+    toast(`🗳️ The street meeting starts at 6PM and you’re ${G.trip ? 'on the road' : 'at ' + placeName()}. Head home!`, 'bad');
     if (G.trip?.to !== 'street') setWaypoint('street', true);
   }
 }
@@ -193,7 +193,7 @@ export function worldTick(): void {
 /** For actions that need you at home: true if you're there, otherwise a toast and false. */
 export function needHome(what: string): boolean {
   if (atHome()) return true;
-  toast(`🏠 ${what} dey house — you dey ${G.trip ? 'road' : placeName()}. Go home first!`, 'bad');
+  toast(`🏠 ${what} is at home, and you’re ${G.trip ? 'on the road' : 'at ' + placeName()}. Go home first.`, 'bad');
   return false;
 }
 
@@ -212,35 +212,35 @@ const didToday = (id: string): boolean => (G.flags.did?.[id] ?? -1) === G.day;
 const markDone = (id: string): void => { (G.flags.did ??= {})[id] = G.day; };
 
 export const PLACE_ACTIONS: PlaceAction[] = [
-  { id: 'buka', at: 'market', t: '🍲 Chop for buka — ₦200', sub: 'Cheaper than cooking. Hunger −40',
-    blocked: () => (G.cash < 200 ? 'No ₦200' : G.hunger < 15 ? 'You never hungry' : null),
-    fn: () => { addCash(-200, 'Buka food'); G.hunger = Math.max(0, G.hunger - 40); fun(2); toast('🍲 Mama Put serve you correct amala. Belle don sweet.', 'sys'); } },
-  { id: 'marketGist', at: 'market', t: '🗣️ Collect market gist', sub: 'Fun +5', daily: true,
-    fn: () => { fun(5); toast('🗣️ Market women say NEPA oga don buy new jeep. "Na our money o!" Fun +5', 'npc'); } },
-  { id: 'okadaGist', at: 'junction', t: '🛵 Gist with the okada men', sub: 'Fun +4 · dem know every road', daily: true,
-    fn: () => { fun(4); toast('🛵 Okada man: "Light for that side? E don go since Tuesday. Una own better."', 'npc'); } },
-  { id: 'cafeCharge', at: 'campus', t: '🔌 Charge phone at the cyber café — ₦200', sub: 'Dem get gen. Phone +50%',
-    blocked: () => (G.cash < 200 ? 'No ₦200' : G.phone >= 95 ? 'Phone full already' : !isOpen('campus') ? 'Café don close' : null),
-    fn: () => { addCash(-200, 'Cyber café charging'); G.phone = Math.min(100, G.phone + 50); toast('🔌 Café gen dey hum. Your phone don rise +50%.', 'sys'); } },
+  { id: 'buka', at: 'market', t: '🍲 Eat at a food stall: ₦200', sub: 'Cheaper than cooking. Hunger −40',
+    blocked: () => (G.cash < 200 ? 'Need ₦200' : G.hunger < 15 ? 'You’re not hungry' : null),
+    fn: () => { addCash(-200, 'Buka food'); G.hunger = Math.max(0, G.hunger - 40); fun(2); toast('🍲 Mama Put serves you a great plate of amala. Delicious.', 'sys'); } },
+  { id: 'marketGist', at: 'market', t: '🗣️ Catch up on market gossip', sub: 'Fun +5', daily: true,
+    fn: () => { fun(5); toast('🗣️ The market women say the power boss just bought a new jeep. "With our money!" Fun +5', 'npc'); } },
+  { id: 'okadaGist', at: 'junction', t: '🛵 Chat with the okada riders', sub: 'Fun +4 · they know every road', daily: true,
+    fn: () => { fun(4); toast('🛵 An okada rider: "Power on that side? Gone since Tuesday. Yours is better."', 'npc'); } },
+  { id: 'cafeCharge', at: 'campus', t: '🔌 Charge your phone at the café: ₦200', sub: 'They have a generator. Phone +50%',
+    blocked: () => (G.cash < 200 ? 'Need ₦200' : G.phone >= 95 ? 'Phone is already full' : !isOpen('campus') ? 'The café is closed' : null),
+    fn: () => { addCash(-200, 'Cyber café charging'); G.phone = Math.min(100, G.phone + 50); toast('🔌 The café generator hums. Your phone is up 50%.', 'sys'); } },
   { id: 'complain', at: 'disco', t: '📝 Complain about estimated billing', sub: 'Small chance of free units', daily: true,
-    blocked: () => (!isOpen('disco') ? 'Office don close' : null),
+    blocked: () => (!isOpen('disco') ? 'The office is closed' : null),
     fn: () => {
-      if (Math.random() < .3) { G.meterUnits += 3; toast('📝 Miracle! Customer care credit you <b>3 units</b> "as goodwill". Frame this day.', 'sys'); sfx.cheer(); }
-      else toast('📝 Customer care: "We go escalate am." You fill form in triplicate. Nothing happen.', 'npc');
+      if (Math.random() < .3) { G.meterUnits += 3; toast('📝 A miracle! Customer care credits you <b>3 units</b> "as goodwill".', 'sys'); sfx.cheer(); }
+      else toast('📝 Customer care: "We will escalate it." You fill a form in triplicate. Nothing happens.', 'npc');
     } },
-  { id: 'service', at: 'church', t: '🙏 Attend the service', sub: 'Mood +6 · trust +2 · neighbours wey dey here like you more', daily: true,
-    blocked: () => (!isOpen('church') ? 'Service na Sunday morning' : null),
+  { id: 'service', at: 'church', t: '🙏 Attend the service', sub: 'Mood +6 · trust +2 · neighbours here like you more', daily: true,
+    blocked: () => (!isOpen('church') ? 'Service is on Sunday morning' : null),
     fn: () => {
       G.happiness = Math.min(100, G.happiness + 6); G.trust = Math.min(100, G.trust + 2);
       for (const id of peopleAt('church')) { const s = G.npcs.find((n) => n.id === id)!; s.rel = Math.min(100, s.rel + 2); }
-      toast('🙏 Pastor pray say "every transformer for this area go stand firm!" Everybody shout AMEN.', 'sys');
+      toast('🙏 The pastor prays that "every transformer in this area will stand firm!" Everyone shouts AMEN.', 'sys');
     } },
 ];
 
 /** Run a place action if you're there and it's allowed. */
 export function doPlaceAction(id: string): void {
   const a = PLACE_ACTIONS.find((x) => x.id === id); if (!a || !here(a.at)) return;
-  if (a.daily && didToday(id)) { toast('⏳ You don do that one today.', 'bad'); return; }
+  if (a.daily && didToday(id)) { toast('⏳ You’ve already done that today.', 'bad'); return; }
   const why = a.blocked?.(); if (why) { toast('🚫 ' + why, 'bad'); return; }
   if (a.daily) markDone(id);
   a.fn(); save(); updHUD();
@@ -253,5 +253,5 @@ export const shopPlace = (itemId: string): PlaceId => (itemId === 'fuel3' ? 'fue
 export const deliveryFee = (itemId: string): number => (here(shopPlace(itemId)) ? 0 : DELIVERY_FEE);
 export const feeNote = (itemId: string): string => {
   const f = deliveryFee(itemId);
-  return f ? `+₦${fmt(f)} delivery (₦0 if you buy am for ${place(shopPlace(itemId)).n})` : 'No delivery fee — you dey here';
+  return f ? `+₦${fmt(f)} delivery (free if you buy it at ${place(shopPlace(itemId)).n})` : 'No delivery fee: you’re here';
 };

@@ -24,11 +24,11 @@ export function whereabouts(id: string): Whereabouts {
   const w = routineSlot(id, h);
   const evening = h >= 19 || h < 1;
   if (w.at === 'in' && evening) {
-    if (!G.gridOn && G.temp >= 28) return { at: 'outside', act: 'Sitting outside — heat no gree sleep' };
+    if (!G.gridOn && G.temp >= 28) return { at: 'outside', act: 'Sitting outside, too hot to sleep' };
     if (streetLit() && h < 23) return { at: 'outside', act: 'Enjoying the streetlight 💡' };
   }
-  if (id === 'remote' && w.at === 'in' && w.act === 'On work calls' && !G.gridOn) return { at: 'porch', act: 'Hunting for hotspot! 📶' };
-  if (id === 'barber' && w.at === 'porch' && !G.gridOn) return { at: 'porch', act: 'Waiting for light — clipper no dey work' };
+  if (id === 'remote' && w.at === 'in' && w.act === 'On work calls' && !G.gridOn) return { at: 'porch', act: 'Looking for a hotspot! 📶' };
+  if (id === 'barber' && w.at === 'porch' && !G.gridOn) return { at: 'porch', act: 'Waiting for power. The clippers won’t work.' };
   if (w.at !== 'in' && w.at !== 'out' && opinion(id) <= GRUDGE) return { at: w.at, act: '😒 ' + w.act + ' (avoiding you)' };
   return w;
 }

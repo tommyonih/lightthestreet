@@ -3,149 +3,192 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Light Up Your Street — NEPA fit take light anytime</title>
-<meta name="description" content="A comedy survival sim about NEPA, prepaid meters, generators and neighbours.">
-<link rel="canonical" href="https://lightupyourstreet.com/">
+<title>Light Up Your Street — a Lagos life sim by NextPawa</title>
+<meta name="description" content="Live your Lagos street story. Power cuts, generators, neighbours and hustles. Free to play; all money in the game is fictional.">
+<link rel="canonical" href="https://nextpawa.com/game">
 <meta property="og:title" content="Light Up Your Street">
-<meta property="og:description" content="NEPA fit take light anytime. Your street ready? A free comedy survival sim — all money is fictional.">
-<meta property="og:url" content="https://lightupyourstreet.com/">
+<meta property="og:description" content="Born a Net Baby or a Local Baby? Live your Lagos street story. Free to play.">
+<meta property="og:url" content="https://nextpawa.com/game">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://lightupyourstreet.com/icons/icon-512.png">
-<meta name="theme-color" content="#141824">
+<meta property="og:image" content="https://nextpawa.com/game/app/icons/icon-512.png">
+<meta name="theme-color" content="#cfe6f7">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Light Up">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
 </head>
 <body>
 <div id="app">
 
   <!-- SPLASH -->
   <div id="splash" aria-hidden="true">
-    <img class="logo" src="./favicon.svg" alt="" width="96" height="96">
+    <img class="logo" src="./favicon.svg" alt="" width="84" height="84">
     <div class="splashName">Light Up Your Street</div>
     <div class="splashBar"><i></i></div>
+    <div class="splashBy">by NextPawa</div>
+  </div>
+
+  <!-- the city map: behind the landing screen, and full screen from the Map tab -->
+  <div id="city" aria-hidden="true">
+    <canvas id="cityCv"></canvas>
+    <div id="cityFallback"></div>
   </div>
 
   <!-- BLANK (home route) -->
   <div class="screen" id="scr-blank"></div>
 
-  <!-- WELCOME -->
-  <div class="screen" id="scr-welcome">
-    <div class="hero">
-      <img class="logo" src="./favicon.svg" alt="" width="104" height="104">
-      <h1>Light Up Your Street</h1>
-      <p class="tagline">“NEPA fit take light anytime. Your street ready?”</p>
-    </div>
-    <div class="card">
-      <button class="btn primary" id="btnPlay">Play Game</button>
-      <button class="btn" id="btnContinue" style="display:none">Continue Game</button>
-      <div class="row">
-        <button class="btn" id="btnRules"><i data-icon="check" data-size="18"></i> Rules</button>
-        <button class="btn" id="btnSoundW">Sound: <span id="soundStateW">On</span></button>
+  <!-- WELCOME: the city behind, a top bar, and one card at the bottom -->
+  <div class="screen overlay" id="scr-welcome">
+    <header class="topbar">
+      <div class="brand"><img src="./favicon.svg" alt="" width="30" height="30"><b>Light Up Your Street</b></div>
+      <div class="topActs" id="topActs">
+        <button class="pill primary" id="btnTopSignup">Sign up</button>
+        <button class="pill" id="btnTopLogin">Log in</button>
       </div>
-      <button class="btn" id="btnAccount" style="display:none"><i data-icon="users" data-size="18"></i> <span id="accountState">Sign in to save online</span></button>
-      <button class="btn ghost" id="btnInstall" style="display:none"><i data-icon="download" data-size="18"></i> Install app</button>
-      <p class="note" id="iosHint" style="display:none">Install: tap <b>Share</b> then <b>Add to Home Screen</b>.</p>
-      <p class="note">A comedy survival sim about NEPA, prepaid meters, generators and neighbours.<br>
-      All money, units &amp; tokens are <b>100% fictional</b>. Free to play. No real payments.</p>
+    </header>
+    <div class="chips" id="adChips"></div>
+    <div class="sheetCard" id="welcomeCard">
+      <!-- signed out -->
+      <div id="wOut">
+        <p class="lede"><b>Live your Lagos street story.</b> Born rich or born broke, it's a random roll. Free to play.</p>
+        <div class="row">
+          <button class="btn primary" id="btnPlay">Sign up free</button>
+          <button class="btn" id="btnLogin">Log in</button>
+        </div>
+      </div>
+      <!-- signed in, or a save on this device -->
+      <div id="wIn" hidden>
+        <div class="profile">
+          <canvas id="wAva" width="140" height="190"></canvas>
+          <div><b id="wName">Resident</b><span id="wMeta"></span></div>
+        </div>
+        <button class="btn primary" id="btnContinue">Continue</button>
+        <button class="btn" id="btnNewLife">New life</button>
+        <div class="signedAs" id="signedAs" hidden><span id="accountState"></span><button class="link" id="btnLogout">Log out</button></div>
+      </div>
+      <div class="miniRow">
+        <button class="link" id="btnRules">How it works</button>
+        <button class="link" id="btnSoundW">Sound: <span id="soundStateW">On</span></button>
+        <button class="link" id="btnInstall" style="display:none">Install app</button>
+      </div>
+      <p class="note" id="iosHint" style="display:none">To install: tap <b>Share</b>, then <b>Add to Home Screen</b>.</p>
     </div>
   </div>
 
-  <!-- AGE -->
-  <div class="screen" id="scr-age">
+  <!-- AUTH: create account / log in -->
+  <div class="screen light" id="scr-auth">
+    <button class="backlink" id="authBack">← Back to the city</button>
+    <div class="authHero">
+      <img src="./favicon.svg" alt="" width="64" height="64">
+      <h1>Light Up Your Street <span class="age">18+</span></h1>
+      <p>Your street, your story, real neighbours.</p>
+    </div>
     <div class="card">
-      <h2>Hold on small 🤚</h2>
-      <p style="line-height:1.6">This game is intended for players aged <b>18 or older</b>.
-      No account needed — just your nickname and your street wahala. If you choose to sign in, we keep your email and your save, nothing else.</p>
-      <p><b>Confirm say you don reach 18?</b></p>
-      <div class="row">
-        <button class="btn primary" id="btnAgeYes">Yes, I am 18+</button>
-        <button class="btn" id="btnAgeNo">Not yet</button>
+      <div class="seg" role="tablist">
+        <button role="tab" data-mode="up" class="sel" id="tabUp">Create account</button>
+        <button role="tab" data-mode="in" id="tabIn">Log in</button>
       </div>
-      <p class="note" id="ageNote"></p>
+      <button class="btn gbtn" id="btnGoogle" type="button">
+        <svg class="glogo" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        <span id="googleLabel">Continue with Google</span>
+      </button>
+      <div class="or"><span>or with email</span></div>
+      <form id="authForm" novalidate>
+        <div class="fld up"><label for="fName">Your name</label><input class="txt" id="fName" autocomplete="name" maxlength="60"></div>
+        <div class="fld up"><label for="fUser">Username</label>
+          <div class="pre"><span>@</span><input class="txt" id="fUser" autocomplete="username" maxlength="14" autocapitalize="off" spellcheck="false"></div>
+          <small>Your name in the game.</small></div>
+        <div class="fld"><label for="fEmail">Email</label><input class="txt" id="fEmail" type="email" autocomplete="email" inputmode="email" autocapitalize="off"></div>
+        <div class="fld"><label for="fPass">Password</label>
+          <div class="pw"><input class="txt" id="fPass" type="password" autocomplete="new-password"><button type="button" class="eye" id="fEye" aria-label="Show password"></button></div>
+          <small class="up">At least 8 characters.</small></div>
+        <div class="fld up"><label>Date of birth</label><div class="dob" id="dobUp"></div></div>
+        <label class="check up"><input type="checkbox" id="fAgree"><span>I'm <b>18+</b> and agree to the <a href="https://nextpawa.com/terms" target="_blank" rel="noopener">Terms</a> and <a href="https://nextpawa.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+        <div class="linksRow in"><button type="button" class="link" id="lnkForgot">Forgot password?</button></div>
+        <div class="formErr" id="authErr" role="alert"></div>
+        <button class="btn primary" type="submit" id="authSubmit">Sign up · it's free</button>
+        <p class="note" id="authFoot">Your character lives in the same Lagos as everyone who signs up.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- AGE: for Google sign-ins, which don't come with a date of birth -->
+  <div class="screen light" id="scr-age">
+    <div class="card">
+      <div class="bigEmoji">🗓️</div>
+      <h2>One quick thing</h2>
+      <p class="sub">This game is for players aged 18 and over. When were you born?</p>
+      <div class="dob" id="dobAge"></div>
+      <div class="formErr" id="ageNote" role="alert"></div>
+      <button class="btn primary" id="btnAgeYes">Continue</button>
     </div>
   </div>
 
   <!-- RULES -->
-  <div class="screen" id="scr-rules">
+  <div class="screen light" id="scr-rules">
     <div class="card">
-      <h2>📜 House Rules</h2>
+      <h2>How it works</h2>
       <div class="rules">
-        • The game is <b>free to play</b>.<br>
-        • All prices, naira, meter units and tokens are <b>simulated &amp; virtual</b>.<br>
-        • No in-game currency can be cashed out — ever.<br>
-        • The game does <b>not</b> collect or process real electricity payments.<br>
-        • NextPawa (units &amp; data) and Verispon (escrow) appear in the game with game money. Using the real NextPawa or Verispon is separate &amp; optional — never needed to win.<br>
-        • Use a nickname anywhere public.<br>
-        • Never do dangerous electrical repairs or run generators indoors/unsafe — in-game or real life.<br>
-        • Generators must stay outdoors, away from windows. The game enforces this.<br>
-        • <b>Generator fumes can kill.</b> They contain carbon monoxide, which you can't see or smell. Never run a generator inside a house, shop, kitchen or garage, or near doors and windows.<br>
+        <p>• <b>Free to play.</b> All naira, units and tokens in the game are pretend money. Nothing can be cashed out.</p>
+        <p>• Every new life is a <b>random roll</b>. A Net Baby starts rich and well connected. A Local Baby starts at the bottom, sometimes in debt.</p>
+        <p>• Keep your meter topped up, your phone charged and your neighbours on your side. Light can go at any time.</p>
+        <p>• NextPawa (units and data) and Verispon (escrow) are in the game and use game money. The real apps are separate and optional, and you never need them to win.</p>
+        <p>• Use a nickname anywhere public.</p>
+        <p>• <b>Generator fumes can kill.</b> They contain carbon monoxide, which you can't see or smell. Never run a generator inside a house, shop or garage, or near doors and windows.</p>
       </div>
-      <p class="note" id="operator">Light Up Your Street is operated by <b>Netsible Solutions NG Limited</b>.</p>
-      <button class="btn primary" id="btnRulesBack" style="margin-top:12px">I understand</button>
+      <p class="note" id="operator">Light Up Your Street is run by <b>Netsible Solutions NG Limited</b>.</p>
+      <button class="btn primary" id="btnRulesBack">Got it</button>
     </div>
   </div>
 
-  <!-- CHARACTER CREATION -->
-  <div class="screen" id="scr-create">
-    <div class="card wide">
-      <h2>Create Your Resident</h2>
-      <div id="createWrap">
-        <canvas id="preview" width="140" height="190"></canvas>
-        <canvas id="preview3d" class="off" width="140" height="190"></canvas>
-        <div style="flex:1;min-width:220px">
-          <label class="lbl">Nickname</label>
-          <input class="txt" id="inpName" maxlength="14" placeholder="e.g. Smallie, Mama Nkechi…">
-          <label class="lbl">Presentation</label>
-          <div class="opts" id="optGender"></div>
-          <label class="lbl">Skin Tone</label>
-          <div class="opts" id="optSkin"></div>
-          <label class="lbl">Hair</label>
-          <div class="opts" id="optHair"></div>
-          <label class="lbl">Outfit</label>
-          <div class="opts" id="optOutfit"></div>
-        </div>
+  <!-- CHARACTER CREATION: look first, then name and personality -->
+  <div class="screen light" id="scr-create">
+    <header class="crHead">
+      <button class="iconbtn round" id="crBack" aria-label="Back"><i data-icon="chevron" data-size="20"></i></button>
+      <div class="crTitle"><b id="crTitle">Create your character</b><div class="steps" id="crSteps"><i class="on"></i><i></i></div></div>
+      <button class="iconbtn round" id="crUndo" aria-label="Undo" disabled><i data-icon="undo" data-size="18"></i></button>
+      <button class="iconbtn round" id="crRandom" aria-label="Random look"><i data-icon="shuffle" data-size="18"></i></button>
+    </header>
+    <div class="crStage">
+      <div class="nameTag" id="crName">@you</div>
+      <canvas id="preview" width="140" height="190"></canvas>
+      <canvas id="preview3d" class="off" width="140" height="190"></canvas>
+    </div>
+    <div class="crPanel">
+      <div class="crStep" id="crLook">
+        <nav class="crRail" id="crRail"></nav>
+        <div class="crGrid" id="crGrid"></div>
       </div>
-      <label class="lbl">Pick your background (starting situation)</label>
-      <div class="opts" id="optBg"></div>
-      <label class="lbl">Pick your street (how NEPA treats you)</label>
-      <div class="opts" id="optStreet"></div>
-      <label class="lbl">Pick 1–2 personality traits</label>
-      <div class="opts" id="optTraits"></div>
-      <button class="btn primary" id="btnEnter">Enter the Street</button>
+      <div class="crStep" id="crAbout" hidden>
+        <label class="lbl" for="inpName">Nickname</label>
+        <input class="txt" id="inpName" maxlength="14" placeholder="e.g. Smallie, Mama Nkechi">
+        <label class="lbl">Pick 1 or 2 personality traits</label>
+        <div class="opts" id="optTraits"></div>
+        <p class="note">Where you're born is a random roll when you finish: Net Baby or Local Baby.</p>
+      </div>
+      <button class="btn primary" id="btnEnter">Next</button>
+    </div>
+  </div>
+
+  <!-- BIRTH: the roll, then the reveal -->
+  <div class="screen light" id="scr-birth">
+    <div class="card birthCard" id="birthCard">
+      <div class="dice" id="birthDice">🎲</div>
+      <h2 id="birthTitle">Rolling your birth…</h2>
+      <p class="sub" id="birthDesc"></p>
+      <div class="birthStats" id="birthStats"></div>
+      <button class="btn primary" id="btnBirthGo" hidden>Start my life</button>
     </div>
   </div>
 
   <!-- GAME -->
   <div class="screen" id="scr-game">
-    <header id="hud">
-      <div class="hudTop">
-        <div class="ava" id="hudAva">?</div>
-        <div class="who">
-          <b id="hudName">Resident</b>
-          <span><span id="pillTime">Day 1 • 07:00</span> · <span id="pillWeather">☀️ 32°C</span></span>
-        </div>
-        <div class="cash" id="pillCash">₦5,000</div>
-    <button class="iconbtn viewbtn" id="btnView" aria-label="Switch street view">2D</button>
-    <button class="iconbtn" id="btnSoundG" aria-label="Sound"></button>
-    <button class="iconbtn" id="btnEnterRoom" aria-label="Enter your room">🏠</button>
-    <button class="iconbtn" id="btnEnd" aria-label="End session"><i data-icon="flag" data-size="18"></i></button>
-      </div>
-      <div class="tiles">
-        <div class="tile" id="pillGrid"></div>
-        <div class="tile" id="pillMeter"></div>
-        <div class="tile" id="pillPhone"></div>
-        <div class="tile" id="pillMood"></div>
-      </div>
-    </header>
-
     <div id="stage">
       <canvas id="street"></canvas>
       <canvas id="street3d" class="off"></canvas>
@@ -154,6 +197,32 @@
       <button id="minimap" aria-label="Open map"></button>
       <div id="wpBar"></div>
     </div>
+
+    <header id="hud">
+      <div class="hudPill">
+        <span class="hp" id="pillTime">Day 1 · 07:00</span>
+        <span class="hp dimmed" id="pillWeather">☀️ 32°C</span>
+        <span class="hp" id="pillMoodTxt"></span>
+        <button class="iconbtn flat" id="btnSoundG" aria-label="Sound"></button>
+        <button class="cashBtn" id="pillCash" aria-label="Your cash. Tap to earn more">₦5,000</button>
+      </div>
+      <div class="hudSide">
+        <div class="ava" id="hudAva">?</div>
+        <b id="hudName">Resident</b>
+        <span class="debt" id="pillDebt" hidden></span>
+      </div>
+      <div class="tiles">
+        <div class="tile" id="pillGrid"></div>
+        <div class="tile" id="pillMeter"></div>
+        <div class="tile" id="pillPhone"></div>
+        <div class="tile" id="pillMood"></div>
+      </div>
+      <div class="hudTools">
+        <button class="iconbtn viewbtn" id="btnView" aria-label="Switch street view">2D</button>
+        <button class="iconbtn" id="btnEnterRoom" aria-label="Go inside your room"><i data-icon="door" data-size="18"></i></button>
+        <button class="iconbtn" id="btnEnd" aria-label="End session"><i data-icon="flag" data-size="18"></i></button>
+      </div>
+    </header>
 
     <div id="bar">
       <button class="act primary" id="btnBuy"><span class="ai"><i data-icon="zap"></i></span><span class="al">Buy units</span></button>
@@ -179,51 +248,59 @@
       <div id="phoneBody"></div>
     </div>
 
+    <!-- the city map, full screen: pins for places and products -->
+    <div id="mapLayer" aria-hidden="true">
+      <div class="mapTop">
+        <b>🗺️ Lagos</b><span id="mapWhere"></span>
+        <button class="iconbtn round" id="mapClose" aria-label="Close map"><i data-icon="close" data-size="18"></i></button>
+      </div>
+      <div class="mapCard" id="mapCard"></div>
+    </div>
+
     <nav id="tabbar">
-      <button class="tbi sel" data-nav="home" id="tabHome"><i data-icon="home"></i><span>Street</span></button>
-      <button class="tbi" data-nav="meter" id="btnPhoneHud"><i data-icon="zap"></i><span>NextPawa</span></button>
-      <button class="tbi" data-nav="street"><i data-icon="users"></i><span>People</span></button>
-      <button class="tbi" data-nav="map"><i data-icon="map"></i><span>Map</span></button>
-      <button class="tbi" data-nav="apps"><i data-icon="grid"></i><span>Apps</span></button>
+      <button class="tbi sel" data-nav="home" id="tabHome"><i data-icon="home"></i><span>Home</span></button>
+      <button class="tbi" data-nav="meter" id="btnPhoneHud"><i data-icon="zap"></i><span>Buy</span></button>
+      <button class="tbi" data-nav="map" id="tabMap"><i data-icon="map"></i><span>Map</span></button>
+      <button class="tbi" data-nav="apps" id="tabPhone"><i data-icon="phone"></i><span>Phone</span></button>
     </nav>
   </div>
 
   <!-- ROOM -->
-  <div class="screen" id="scr-room">
+  <div class="screen light" id="scr-room">
     <div class="card wide">
       <header class="roomHead">
-        <h2>🏠 Your Room</h2>
+        <h2>🏠 Your room</h2>
         <div class="roomStats">
           <span>₦<span id="roomCash">0</span></span>
-          <span>♥<span id="roomHappiness">0</span></span>
-          <span>⚡<span id="roomPower">OFF</span></span>
+          <span>♥ <span id="roomHappiness">0</span></span>
+          <span>⚡ <span id="roomPower">OFF</span></span>
         </div>
       </header>
       <div class="roomGrid">
         <button class="btn primary roomBtn" id="roomSleep"><i data-icon="moon" data-size="20"></i><span>Sleep</span></button>
         <button class="btn roomBtn" id="roomEat"><i data-icon="food" data-size="20"></i><span>Eat</span></button>
         <button class="btn roomBtn" id="roomTv"><i data-icon="tv" data-size="20"></i><span>Watch TV</span></button>
-        <button class="btn roomBtn" id="roomCharge"><i data-icon="zap" data-size="20"></i><span>Charge Phone</span></button>
+        <button class="btn roomBtn" id="roomCharge"><i data-icon="zap" data-size="20"></i><span>Charge phone</span></button>
         <button class="btn roomBtn" id="roomRest"><i data-icon="user" data-size="20"></i><span>Rest</span></button>
-        <button class="btn roomBtn" id="roomLeave"><i data-icon="door" data-size="20"></i><span>Go Outside</span></button>
+        <button class="btn roomBtn" id="roomLeave"><i data-icon="door" data-size="20"></i><span>Go outside</span></button>
       </div>
       <div id="roomMsg" class="roomMsg"></div>
     </div>
   </div>
 
   <!-- RESULTS -->
-  <div class="screen" id="scr-results">
+  <div class="screen light" id="scr-results">
     <div class="card">
-      <h2>📋 Street Report Card</h2>
+      <h2>📋 Street report</h2>
       <div id="resStats"></div>
       <div class="statusLine" id="resStatus"></div>
       <button class="btn primary" id="btnShareImg">Make my share image</button>
       <div class="row">
-        <button class="btn" id="btnCopy">Copy Summary</button>
-        <button class="btn" id="btnResume">Back to Street</button>
+        <button class="btn" id="btnCopy">Copy summary</button>
+        <button class="btn" id="btnResume">Back to the street</button>
       </div>
-      <button class="btn danger" id="btnNewGame">Start New Game (erase save)</button>
-      <p class="note">Statistics are from your actual session. All figures virtual &amp; for gist only.</p>
+      <button class="btn danger" id="btnNewGame">Start a new life (erases this save)</button>
+      <p class="note">These numbers are from your real session. All money is pretend.</p>
     </div>
   </div>
   <div id="modal"><div class="card" id="modalCard">

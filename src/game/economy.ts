@@ -33,21 +33,21 @@ export function partnerLink(id: PartnerId, text: string, destination?: 'electric
 /** The line under every in-game NextPawa purchase: the real thing, separate and optional. */
 const realNextPawa = (): string => {
   const a = partnerLink('nextpawa', 'Buy electricity on NextPawa', 'electricity');
-  return a ? `<br><span style="font-size:12px;color:var(--dim)">Real life too? ${a} — separate &amp; optional, not part of the game.</span>` : '';
+  return a ? `<br><span style="font-size:12px;color:var(--dim)">Need power in real life too? ${a}. Separate and optional, not part of the game.</span>` : '';
 };
 
 export function buyUnits(n: number): void {
   const cost = n * UNIT_PRICE, vendor = n * (UNIT_PRICE - VENDOR_DISCOUNT);
   openModal('⚡ Buy Units',
-    `Meter: <b>${G.meterNo}</b> • ${n} units (game money)<br><span style="color:var(--dim);font-size:12px">You have ₦${fmt(G.cash)}. All prices fictional.</span>${realNextPawa()}`, [
-      { t: `⚡ Pay with NextPawa — ₦${fmt(cost)}`, sub: 'Instant token, receipt for your phone. No shaking.', dis: G.cash < cost, fn: () => {
+    `Meter: <b>${G.meterNo}</b> · ${n} units (game money)<br><span style="color:var(--dim);font-size:12px">You have ₦${fmt(G.cash)}. All prices are made up.</span>${realNextPawa()}`, [
+      { t: `⚡ Pay with NextPawa: ₦${fmt(cost)}`, sub: 'Instant token, receipt on your phone.', dis: G.cash < cost, fn: () => {
         addCash(-cost, `${n} units via NextPawa`); sfx.cash(); loadToken(n);
-        toast(`🧾 NextPawa receipt: ${n} units → meter ${G.meterNo.slice(-4).padStart(G.meterNo.length, '•')}. Sharp sharp!`, 'sys');
+        toast(`🧾 NextPawa receipt: ${n} units → meter ${G.meterNo.slice(-4).padStart(G.meterNo.length, '•')}. Done in seconds.`, 'sys');
       } },
-      { t: `🧍 Roadside vendor — ₦${fmt(vendor)}`, sub: '"Small discount." E fit fail o.', dis: G.cash < vendor, fn: () => {
+      { t: `🧍 Roadside vendor: ₦${fmt(vendor)}`, sub: 'A little cheaper. It might not work.', dis: G.cash < vendor, fn: () => {
         addCash(-vendor, `${n} units from roadside vendor`); sfx.cash();
-        if (chance(.18)) { sfx.bad(); toast('❌ Token rejected! "Invalid token." Vendor say na your meter. Your money don waka. Next time, NextPawa.', 'bad'); }
-        else if (chance(.2)) { G.pendingCredit = { units: n, at: T() + 60 }; toast('⏳ Vendor: "E don enter, just wait." Credit never drop… "Network dey slow."', 'bad'); }
+        if (chance(.18)) { sfx.bad(); toast('❌ Token rejected: "Invalid token." The vendor blames your meter. Your money is gone. Next time, use NextPawa.', 'bad'); }
+        else if (chance(.2)) { G.pendingCredit = { units: n, at: T() + 60 }; toast('⏳ Vendor: "It has gone through, just wait." The credit hasn’t arrived… "The network is slow."', 'bad'); }
         else loadToken(n);
       } },
       { t: 'Cancel' },
@@ -57,9 +57,9 @@ export function buyUnits(n: number): void {
 /** Mobile data on NextPawa: instant, like the units. */
 export function buyData(i: number): void {
   const b = DATA_BUNDLES[i]; if (!b) return;
-  if (G.cash < b.p) { toast(`💸 ₦${fmt(b.p)} no dey your pocket for ${b.n} data.`, 'bad'); return; }
+  if (G.cash < b.p) { toast(`💸 You need ₦${fmt(b.p)} for ${b.n} of data.`, 'bad'); return; }
   addCash(-b.p, `${b.n} data via NextPawa`); G.dataMB += b.mb; sfx.on();
-  toast(`📶 NextPawa: ${b.n} data don land. Phone hustles fit run again.`, 'sys'); save(); updHUD();
+  toast(`📶 NextPawa: ${b.n} of data added. Your phone hustles can run again.`, 'sys'); save(); updHUD();
 }
 export const dataLabel = (mb = G.dataMB): string => (mb >= 1000 ? (mb / 1000).toFixed(1) + 'GB' : Math.max(0, Math.round(mb)) + 'MB');
 
@@ -75,21 +75,21 @@ export function itemPrice(id: string): number {
 
 export function buyItem(id: string): void {
   const it = SHOP.find((s) => s.id === id)!, fee = deliveryFee(id), p = itemPrice(id) + fee;
-  openModal('🛒 ' + it.n, `${it.d}<br><br>Price: <b>₦${fmt(p)}</b> (fictional) ${itemPrice(id) !== it.p ? '<span style="color:var(--green)">— Solar Dreamer discount!</span>' : ''}<br><span style="font-size:12px;color:var(--dim)">${feeNote(id)}</span><br>You have ₦${fmt(G.cash)}.`, [
-    { t: `Buy — ₦${fmt(p)}`, dis: G.cash < p, fn: () => { addCash(-p, it.n + (fee ? ' + delivery' : '')); sfx.cash(); grantItem(id); } },
+  openModal('🛒 ' + it.n, `${it.d}<br><br>Price: <b>₦${fmt(p)}</b> (made-up price) ${itemPrice(id) !== it.p ? '<span style="color:var(--green)">Solar Dreamer discount!</span>' : ''}<br><span style="font-size:12px;color:var(--dim)">${feeNote(id)}</span><br>You have ₦${fmt(G.cash)}.`, [
+    { t: `Buy: ₦${fmt(p)}`, dis: G.cash < p, fn: () => { addCash(-p, it.n + (fee ? ' + delivery' : '')); sfx.cash(); grantItem(id); } },
     { t: 'Later' },
   ]);
 }
 
 /** What having an item does. Used by the shop and by online orders when they arrive. */
 export function grantItem(id: string): void {
-  if (id === 'fuel3') { G.fuel += 3; toast('⛽ 3 litres fuel added. Keep gen outdoors o!', 'sys'); }
-  if (id === 'lamp') { G.lamp = 1; toast('🔦 Rechargeable lamp acquired. Darkness no be your mate again.', 'sys'); }
-  if (id === 'powerbank') { G.powerbank = 1; G.pbankCharges = 2; toast('🔋 Power bank! 2 emergency charges per day.', 'sys'); }
-  if (id === 'fan') { G.fanRecharge = 1; G.fanBat = 100; toast('🌀 Rechargeable fan! Heat go hear am.', 'sys'); }
-  if (id === 'gen2') { G.gen = 2; G.genCond = Math.max(G.genCond, 80); toast('🔌 BIG generator! AC sef fit run… small.', 'sys'); }
-  if (id === 'inverter') { G.inverter = 1; toast('🔋 Inverter installed. Silent power, no noise wahala!', 'sys'); }
-  if (id === 'solar') { G.solar = 1; G.inverter = 1; toast('☀️ SOLAR INSTALLED! You don escape NEPA premium. Congratulations!!', 'sys'); sfx.cheer(); }
-  if (id === 'fridge') { G.fridgeEff = 1; toast('🧊 Efficient fridge — units drain reduce by 40%.', 'sys'); }
+  if (id === 'fuel3') { G.fuel += 3; toast('⛽ 3 litres of fuel added. Keep the generator outdoors!', 'sys'); }
+  if (id === 'lamp') { G.lamp = 1; toast('🔦 Rechargeable lamp bought. No more sitting in the dark.', 'sys'); }
+  if (id === 'powerbank') { G.powerbank = 1; G.pbankCharges = 2; toast('🔋 Power bank bought! 2 emergency charges a day.', 'sys'); }
+  if (id === 'fan') { G.fanRecharge = 1; G.fanBat = 100; toast('🌀 Rechargeable fan bought! Take that, heat.', 'sys'); }
+  if (id === 'gen2') { G.gen = 2; G.genCond = Math.max(G.genCond, 80); toast('🔌 Big generator bought! It runs everything.', 'sys'); }
+  if (id === 'inverter') { G.inverter = 1; toast('🔋 Inverter installed. Silent backup power, no noise.', 'sys'); }
+  if (id === 'solar') { G.solar = 1; G.inverter = 1; toast('☀️ Solar installed! You’re free from the grid in the daytime. Congratulations!', 'sys'); sfx.cheer(); }
+  if (id === 'fridge') { G.fridgeEff = 1; toast('🧊 Efficient fridge installed. Your appliances use 40% less.', 'sys'); }
   save(); updHUD(); checkAch();
 }

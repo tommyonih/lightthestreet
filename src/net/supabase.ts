@@ -11,7 +11,8 @@ let client: Promise<SupabaseClient> | null = null;
 export function sb(): Promise<SupabaseClient> {
   if (!cloudEnabled()) return Promise.reject(new Error('Supabase is not configured'));
   return client ??= import('@supabase/supabase-js').then(({ createClient }) => createClient(SB_URL!, SB_KEY!, {
-    // PKCE: the Google redirect comes back with ?code=, which the client swaps for a session on load
-    auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+    // implicit, like nextpawa.com's own client: both share one session in localStorage, and a link back from Google
+    // or an email can be finished by whichever page it lands on (the site's /auth/callback, or the game itself)
+    auth: { flowType: 'implicit', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   }));
 }

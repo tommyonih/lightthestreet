@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { G, SAVE_VERSION, freshState, loadSave } from '../src/core/state';
+import { BGS } from '../src/data/content';
 import { ALL_DONE_BONUS, CHALLENGES, challenge, checkChallenges, ensureWeek, weekOf, weekRollover } from '../src/game/challenges';
 import { meterEmpty, newDay } from '../src/game/sim';
 import { renderShareCard } from '../src/render/shareCard';
@@ -26,7 +27,7 @@ describe('drawing challenges', () => {
 
   it('the starting cash baseline is the background’s cash, not the default', () => {
     newGame('estate'); ensureWeek();
-    expect(G.week.startCash).toBe(9000);
+    expect(G.week.startCash).toBe(BGS.find((b) => b.id === 'estate')!.cash);
   });
 });
 
@@ -68,7 +69,7 @@ describe('progress', () => {
     finishWeek();
     expect(G.cash).toBeGreaterThanOrEqual(cash0 + challenge('meter').reward + ALL_DONE_BONUS);
     expect(G.ach).toContain('champion');
-    expect(title).toContain('Week 1 don finish');
+    expect(title).toContain('Week 1 is over');
   });
 
   it('rollover only happens once per week', () => {

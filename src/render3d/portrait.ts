@@ -47,6 +47,32 @@ export function startPreview(canvas: HTMLCanvasElement, look: () => PortraitLook
   return () => { cancelAnimationFrame(raf); renderer.dispose(); };
 }
 
+/** Creator tiles: one still per look from a single shared renderer (phones allow only a few WebGL contexts).
+    `head` frames the face for skin and hair; `full` shows head to shoes for body and outfit. */
+let thumbGL: { renderer: THREE.WebGLRenderer; cv: HTMLCanvasElement } | null = null;
+export function thumbs(looks: PortraitLook[], w: number, h: number, framing: 'head' | 'full'): HTMLCanvasElement[] {
+  // one renderer for every call: tapping through the categories must not use up the browser's WebGL contexts
+  if (!thumbGL) {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const r = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true, preserveDrawingBuffer: true });
+    r.toneMapping = THREE.ACESFilmicToneMapping; r.setSize(w, h, false);
+    thumbGL = { renderer: r, cv: c };
+  }
+  const { renderer, cv } = thumbGL;
+  const { scene, camera } = stage(); camera.aspect = w / h;
+  if (framing === 'head') { camera.fov = 17; camera.position.set(0, 1.74, 3.4); camera.lookAt(0, 1.64, 0); }
+  camera.updateProjectionMatrix();
+  const out = looks.map((l) => {
+    const p = build(l); p.root.rotation.y = -.3; p.animate(0, false, false, 'idle', 'happy'); scene.add(p.root);
+    renderer.render(scene, camera); scene.remove(p.root);
+    const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d')!.drawImage(cv, 0, 0);
+    return c;
+  });
+  return out;
+}
+/** Let the thumbnail renderer go once the creator is done. */
+export function freeThumbs(): void { thumbGL?.renderer.dispose(); thumbGL?.renderer.forceContextLoss(); thumbGL = null; }
+
 /** A still portrait (transparent background) for the share card. */
 export function snapshot(l: PortraitLook, w: number, h: number, face: Face = 'happy', pose: Pose = 'idle'): HTMLCanvasElement {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
